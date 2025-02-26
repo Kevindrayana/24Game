@@ -80,7 +80,15 @@ public class LoginUI {
            String username = usernameField.getText();
            String password = new String (passwordField.getPassword());
             try {
-                authenticator.login(username, password);
+                if (authenticator.login(username, password)) {
+                    // redirect to successful page
+                    frame.dispose();
+                    new MainUI(username).paint();
+                } else {
+                    // redirect to error page
+                    frame.dispose();
+                    new ErrorUI("Login failed", "login").paint();
+                }
             } catch (RemoteException ex) {
                 throw new RuntimeException(ex);
             };

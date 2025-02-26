@@ -4,6 +4,7 @@ import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.HashMap;
+import java.util.Map;
 
 public class Authenticator extends UnicastRemoteObject implements Auth{
     public Authenticator() throws RemoteException{
@@ -23,27 +24,27 @@ public class Authenticator extends UnicastRemoteObject implements Auth{
     }
 
     @Override
-    public void login(String username, String password) throws RemoteException{
+    public boolean login(String username, String password) throws RemoteException{
         try {
             HashMap<String, String> usernameToPassword = getUsersInfoFromFile("UserInfo.txt");
 
             // Check if user exists
             if (!usernameToPassword.containsKey(username)) {
                 System.out.println("User not found");
-                return;
+                return false;
             }
 
             // validate user from UserInfo.txt
             if (!password.equals(usernameToPassword.get(username))) {
                 System.out.println("Invalid credentials");
-                return;
+                return false;
             }
 
             // check if user have logged in already
             HashMap<String, String> onlineUsers = getUsersInfoFromFile("OnlineUsers.txt");
             if (onlineUsers.containsKey(username)) {
                 System.out.println("User already logged in");
-                return;
+                return false;
             }
 
             // add user to OnlineUsers.txt
@@ -53,6 +54,7 @@ public class Authenticator extends UnicastRemoteObject implements Auth{
             writer.close();
 
             System.out.println("Login Successful :)");
+            return true;
         } catch (Exception e) {
             e.printStackTrace();
             throw new RemoteException("Login failed", e);
@@ -60,28 +62,59 @@ public class Authenticator extends UnicastRemoteObject implements Auth{
     }
 
     @Override
-    public void register(String username, String password) throws RemoteException {
+    public boolean register(String username, String password, String confirmPassword) throws RemoteException {
         try {
             // read the UserInfo.txt file to get all registered users
             HashMap<String, String> usernameToPassword = getUsersInfoFromFile("UserInfo.txt");
 
+            // check if password equals to confirm password
+            if (!password.equals(confirmPassword)) {
+                System.out.println("password did not match");
+                return false;
+            }
+
             // check if username already registered
             if (usernameToPassword.get(username) != null) {
                 System.out.println("Username already exists");
-                return;
+                return false;
             }
+
             // add user to UserInfo.txt
             BufferedWriter writer = new BufferedWriter(new FileWriter("UserInfo.txt", true));
             writer.write(String.format("%s,%s%n", username, password));
             writer.flush();
             writer.close();
 
-            login(username, password);
-
             System.out.println("Registration Successful ;)");
+            return login(username, password);
 
         } catch (Exception e) {
             e.printStackTrace();
+            return false;
+        }
+    }
+
+    public boolean logout(String username) throws RemoteException {
+        try {
+            // read current online users
+            HashMap<String, String> onlineUsers = getUsersInfoFromFile("OnlineUsers.txt");
+
+            // remove the user
+            onlineUsers.remove(username);
+
+            // rewrite the file with remaining users
+            BufferedWriter writer = new BufferedWriter(new FileWriter("OnlineUsers.txt"));
+            for (Map.Entry<String, String> entry : onlineUsers.entrySet()) {
+                writer.write(String.format("%s,%s%n", entry.getKey(), entry.getValue()));
+            }
+            writer.flush();
+            writer.close();
+
+            System.out.println("User " + username + " logged out successfully");
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
         }
     }
 

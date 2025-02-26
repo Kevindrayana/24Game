@@ -9,6 +9,7 @@ public class RegisterUI {
     private JFrame frame;
     private JTextField usernameField;
     private JPasswordField passwordField;
+    private JPasswordField confirmPasswordField;
     private Auth authenticator;
 
     public RegisterUI() {
@@ -46,7 +47,7 @@ public class RegisterUI {
         JPanel confirmPasswordPanel = new JPanel();
         confirmPasswordPanel.setLayout(new BoxLayout(confirmPasswordPanel, BoxLayout.Y_AXIS));
         JLabel confirmPasswordLabel = new JLabel("Confirm Password");
-        JPasswordField confirmPasswordField = new JPasswordField(20);
+        confirmPasswordField = new JPasswordField(20);
         confirmPasswordPanel.add(confirmPasswordLabel);
         confirmPasswordPanel.add(Box.createRigidArea(new Dimension(0, 5)));
         confirmPasswordPanel.add(confirmPasswordField);
@@ -90,9 +91,19 @@ public class RegisterUI {
         @Override
         public void actionPerformed(ActionEvent e) {
             String username = usernameField.getText();
-            String password = new String (passwordField.getPassword());
+            String password = new String(passwordField.getPassword());
+            String confirmPassword = new String(confirmPasswordField.getPassword());
             try {
-                authenticator.register(username, password);
+                if (authenticator.register(username, password, confirmPassword)) {
+                    // redirect to successful page
+                    frame.dispose();
+                    new MainUI(username).paint();
+                } else {
+                    // redirect to error page
+                    frame.dispose();
+                    // TODO: make the error message more meaningful
+                    new ErrorUI("Registration failed", "register").paint();
+                }
             } catch (RemoteException ex) {
                 throw new RuntimeException(ex);
             };
