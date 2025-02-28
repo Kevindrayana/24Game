@@ -1,6 +1,5 @@
 import java.io.*;
 import java.rmi.Naming;
-import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.HashMap;
@@ -24,28 +23,17 @@ public class Authenticator extends UnicastRemoteObject implements Auth{
     }
 
     @Override
-    public boolean login(String username, String password) throws RemoteException{
+    public LoginStatus login(String username, String password) throws RemoteException{
         try {
             HashMap<String, String> usernameToPassword = getUsersInfoFromFile("UserInfo.txt");
-
-            // Check if user exists
-            if (!usernameToPassword.containsKey(username)) {
-                System.out.println("User not found");
-                return false;
-            }
-
-            // validate user from UserInfo.txt
-            if (!password.equals(usernameToPassword.get(username))) {
-                System.out.println("Invalid credentials");
-                return false;
-            }
-
-            // check if user have logged in already
             HashMap<String, String> onlineUsers = getUsersInfoFromFile("OnlineUsers.txt");
-            if (onlineUsers.containsKey(username)) {
-                System.out.println("User already logged in");
-                return false;
-            }
+
+            // check if user exists
+            if (!usernameToPassword.containsKey(username)) return LoginStatus.USER_NOT_FOUND;
+            // validate user from UserInfo.txt
+            if (!password.equals(usernameToPassword.get(username))) return LoginStatus.INVALID_CREDENTIALS;
+            // check if user have logged in already
+            if (onlineUsers.containsKey(username)) return LoginStatus.ALREADY_LOGGED_IN;
 
             // add user to OnlineUsers.txt
             BufferedWriter writer = new BufferedWriter(new FileWriter("OnlineUsers.txt", true));
@@ -54,30 +42,21 @@ public class Authenticator extends UnicastRemoteObject implements Auth{
             writer.close();
 
             System.out.println("Login Successful :)");
-            return true;
-        } catch (Exception e) {
+
+            return LoginStatus.SUCCESS;
+        } catch (IOException e) {
             e.printStackTrace();
-            throw new RemoteException("Login failed", e);
+            return LoginStatus.FAIL;
         }
     }
 
     @Override
-    public boolean register(String username, String password, String confirmPassword) throws RemoteException {
+    public RegisterStatus register(String username, String password) throws RemoteException {
         try {
-            // read the UserInfo.txt file to get all registered users
             HashMap<String, String> usernameToPassword = getUsersInfoFromFile("UserInfo.txt");
 
-            // check if password equals to confirm password
-            if (!password.equals(confirmPassword)) {
-                System.out.println("password did not match");
-                return false;
-            }
-
             // check if username already registered
-            if (usernameToPassword.get(username) != null) {
-                System.out.println("Username already exists");
-                return false;
-            }
+            if (usernameToPassword.get(username) != null) return RegisterStatus.USERNAME_ALREADY_EXISTED;
 
             // add user to UserInfo.txt
             BufferedWriter writer = new BufferedWriter(new FileWriter("UserInfo.txt", true));
@@ -86,11 +65,15 @@ public class Authenticator extends UnicastRemoteObject implements Auth{
             writer.close();
 
             System.out.println("Registration Successful ;)");
-            return login(username, password);
 
-        } catch (Exception e) {
+            if (login(username, password) != LoginStatus.SUCCESS) {
+                return RegisterStatus.LOGIN_FAIL;
+            }
+
+            return RegisterStatus.SUCCESS;
+        } catch (IOException e) {
             e.printStackTrace();
-            return false;
+            return RegisterStatus.FAIL;
         }
     }
 
@@ -98,10 +81,8 @@ public class Authenticator extends UnicastRemoteObject implements Auth{
         try {
             // read current online users
             HashMap<String, String> onlineUsers = getUsersInfoFromFile("OnlineUsers.txt");
-
             // remove the user
             onlineUsers.remove(username);
-
             // rewrite the file with remaining users
             BufferedWriter writer = new BufferedWriter(new FileWriter("OnlineUsers.txt"));
             for (Map.Entry<String, String> entry : onlineUsers.entrySet()) {
@@ -112,7 +93,7 @@ public class Authenticator extends UnicastRemoteObject implements Auth{
 
             System.out.println("User " + username + " logged out successfully");
             return true;
-        } catch (Exception e) {
+        } catch (IOException e) {
             e.printStackTrace();
             return false;
         }

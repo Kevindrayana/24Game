@@ -1,15 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
   <component name="ChangeListManager">
-    <list default="true" id="b5448d80-5c00-4e19-914d-2cf98c1e2aae" name="Changes" comment="first commit">
-      <change afterPath="$PROJECT_DIR$/src/ErrorUI.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/MainUI.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/OnlineUsers.txt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/UserInfo.txt" afterDir="false" />
+    <list default="true" id="b5448d80-5c00-4e19-914d-2cf98c1e2aae" name="Changes" comment="complete features">
+      <change afterPath="$PROJECT_DIR$/src/LoginStatus.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/RegisterStatus.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Assignment1.iml" beforeDir="false" afterPath="$PROJECT_DIR$/24Game.iml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/Auth.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/Auth.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/Authenticator.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/Authenticator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/ErrorUI.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/ErrorUI.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/LoginUI.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/LoginUI.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/MainUI.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/MainUI.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/RegisterUI.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/RegisterUI.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -22,10 +27,16 @@
       <list>
         <option value="Interface" />
         <option value="Class" />
+        <option value="Enum" />
       </list>
     </option>
   </component>
   <component name="Git.Settings">
+    <option name="RECENT_BRANCH_BY_REPOSITORY">
+      <map>
+        <entry key="$PROJECT_DIR$" value="main" />
+      </map>
+    </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="MarkdownSettingsMigration">
@@ -43,7 +54,8 @@
   "keyToString": {
     "RunOnceActivity.OpenProjectViewOnStart": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
-    "SHARE_PROJECT_CONFIGURATION_FILES": "true"
+    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
+    "last_opened_file_path": "/Users/kevinistimur/Desktop/school/COMP3358 - DPC/24Game"
   },
   "keyToStringList": {
     "com.intellij.ide.scratch.ScratchImplUtil$2/New Scratch File": [
@@ -51,6 +63,12 @@
     ]
   }
 }]]></component>
+  <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/src" />
+      <recent name="$PROJECT_DIR$/" />
+    </key>
+  </component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">
@@ -67,7 +85,14 @@
       <option name="project" value="LOCAL" />
       <updated>1740563796686</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="complete features">
+      <created>1740575662588</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1740575662588</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -75,7 +100,24 @@
       <map>
         <entry key="MAIN">
           <value>
-            <State />
+            <State>
+              <option name="CUSTOM_BOOLEAN_PROPERTIES">
+                <map>
+                  <entry key="Show.Git.Branches" value="true" />
+                </map>
+              </option>
+              <option name="FILTERS">
+                <map>
+                  <entry key="branch">
+                    <value>
+                      <list>
+                        <option value="a2" />
+                      </list>
+                    </value>
+                  </entry>
+                </map>
+              </option>
+            </State>
           </value>
         </entry>
       </map>
@@ -83,6 +125,7 @@
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="first commit" />
-    <option name="LAST_COMMIT_MESSAGE" value="first commit" />
+    <MESSAGE value="complete features" />
+    <option name="LAST_COMMIT_MESSAGE" value="complete features" />
   </component>
 </project>

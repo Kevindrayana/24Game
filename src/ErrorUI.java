@@ -54,6 +54,9 @@ public class ErrorUI {
                 new LoginUI().paint();
             } else if (previousPage.equals("register")) {
                 new RegisterUI().paint();
+            } else { // fail in logout
+                // in this case, previousPage is the username
+                new MainUI(previousPage).paint();
             }
         }
     }

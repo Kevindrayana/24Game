@@ -80,14 +80,21 @@ public class LoginUI {
            String username = usernameField.getText();
            String password = new String (passwordField.getPassword());
             try {
-                if (authenticator.login(username, password)) {
-                    // redirect to successful page
+                if (authenticator.login(username, password) == LoginStatus.SUCCESS) {
                     frame.dispose();
                     new MainUI(username).paint();
-                } else {
-                    // redirect to error page
+                } else if (authenticator.login(username, password) == LoginStatus.USER_NOT_FOUND){
                     frame.dispose();
-                    new ErrorUI("Login failed", "login").paint();
+                    new ErrorUI("Login failed: User not found", "login").paint();
+                } else if (authenticator.login(username, password) == LoginStatus.INVALID_CREDENTIALS){
+                    frame.dispose();
+                    new ErrorUI("Login failed: Invalid Credentials", "login").paint();
+                } else if (authenticator.login(username, password) == LoginStatus.ALREADY_LOGGED_IN){
+                    frame.dispose();
+                    new ErrorUI("Login failed: You are already logged in", "login").paint();
+                } else {
+                    frame.dispose();
+                    new ErrorUI("Login failed: Server error", "login").paint();
                 }
             } catch (RemoteException ex) {
                 throw new RuntimeException(ex);

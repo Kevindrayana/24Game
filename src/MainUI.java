@@ -24,10 +24,8 @@ public class MainUI {
         frame = new JFrame("JPoker 24-Game");
         frame.setPreferredSize(new Dimension(800, 600));
 
-        // Create tabbed pane
         JTabbedPane tabbedPane = new JTabbedPane();
 
-        // User Profile Tab
         JPanel userProfilePanel = createUserProfilePanel();
         tabbedPane.addTab("User Profile", userProfilePanel);
 
@@ -35,7 +33,6 @@ public class MainUI {
         tabbedPane.addTab("Play Game", new JPanel());
         tabbedPane.addTab("Leader Board", new JPanel());
 
-        // Logout tab/button
         JPanel logoutPanel = createLogoutPanel();
         tabbedPane.addTab("Logout", logoutPanel);
 
@@ -51,18 +48,18 @@ public class MainUI {
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
-        // Profile Icon (using a placeholder circle)
-        JPanel iconPanel = new JPanel() {
-            @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                g.setColor(new Color(100, 180, 100));
-                g.fillOval(0, 0, 100, 100);
-            }
-        };
-        iconPanel.setPreferredSize(new Dimension(100, 100));
-        iconPanel.setMaximumSize(new Dimension(100, 100));
-        iconPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
+//        // Profile Icon (using a placeholder circle)
+//        JPanel iconPanel = new JPanel() {
+//            @Override
+//            protected void paintComponent(Graphics g) {
+//                super.paintComponent(g);
+//                g.setColor(new Color(100, 180, 100));
+//                g.fillOval(0, 0, 100, 100);
+//            }
+//        };
+//        iconPanel.setPreferredSize(new Dimension(100, 100));
+//        iconPanel.setMaximumSize(new Dimension(100, 100));
+//        iconPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         // Username display
         JLabel usernameLabel = new JLabel("Welcome, " + username);
@@ -71,7 +68,7 @@ public class MainUI {
 
         // Add components
         panel.add(Box.createVerticalGlue());
-        panel.add(iconPanel);
+//        panel.add(iconPanel);
         panel.add(Box.createRigidArea(new Dimension(0, 20)));
         panel.add(usernameLabel);
         panel.add(Box.createVerticalGlue());
@@ -108,18 +105,11 @@ public class MainUI {
                     frame.dispose();
                     new LoginUI().paint();
                 } else {
-                    // TODO: refactor the error handling here
-                    JOptionPane.showMessageDialog(frame,
-                            "Error occurred during logout",
-                            "Logout Error",
-                            JOptionPane.ERROR_MESSAGE);
+                    frame.dispose();
+                    new ErrorUI("Logout failed", username).paint();
                 }
             } catch (RemoteException ex) {
-                JOptionPane.showMessageDialog(frame,
-                        "Server error during logout: " + ex.getMessage(),
-                        "Server Error",
-                        JOptionPane.ERROR_MESSAGE);
-                ex.printStackTrace();
+                throw new RuntimeException(ex);
             }
         }
     }

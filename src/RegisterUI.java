@@ -93,16 +93,26 @@ public class RegisterUI {
             String username = usernameField.getText();
             String password = new String(passwordField.getPassword());
             String confirmPassword = new String(confirmPasswordField.getPassword());
+
+            if (!password.equals(confirmPassword)) {
+                frame.dispose();
+                new ErrorUI("Registration failed: password did not match", "register").paint();
+                return;
+            }
+
             try {
-                if (authenticator.register(username, password, confirmPassword)) {
-                    // redirect to successful page
+                if (authenticator.register(username, password) == RegisterStatus.SUCCESS) {
                     frame.dispose();
                     new MainUI(username).paint();
-                } else {
-                    // redirect to error page
+                } else if (authenticator.register(username, password) == RegisterStatus.USERNAME_ALREADY_EXISTED){
                     frame.dispose();
-                    // TODO: make the error message more meaningful
-                    new ErrorUI("Registration failed", "register").paint();
+                    new ErrorUI("Registration failed: Username already existed", "register").paint();
+                } else if (authenticator.register(username, password) == RegisterStatus.LOGIN_FAIL){
+                    frame.dispose();
+                    new ErrorUI("Registration succeeded but login failed", "register").paint();
+                } else {
+                    frame.dispose();
+                    new ErrorUI("Registration failed: Server error", "register").paint();
                 }
             } catch (RemoteException ex) {
                 throw new RuntimeException(ex);
