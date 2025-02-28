@@ -2,12 +2,25 @@ import java.io.*;
 import java.rmi.Naming;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
+import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
 public class Authenticator extends UnicastRemoteObject implements Auth {
+    private DatabaseConnection db_conn;
+
     public Authenticator() throws RemoteException {
         super();
+
+        // create a DB connection
+        try {
+            db_conn = new DatabaseConnection();
+        } catch (SQLException | InstantiationException | IllegalAccessException | ClassNotFoundException e) {
+            throw new RuntimeException(e);
+        }
+
+        // TODO: Flush the online_users table
 
         // create OnlineUsers.txt
         try {
@@ -24,109 +37,57 @@ public class Authenticator extends UnicastRemoteObject implements Auth {
 
     @Override
     public LoginStatus login(String username, String password) throws RemoteException {
-        try {
-            HashMap<String, String> usernameToPassword = getUsersInfoFromFile("UserInfo.txt");
-            HashMap<String, String> onlineUsers = getUsersInfoFromFile("OnlineUsers.txt");
+        // read user from DB
+        ArrayList<String> userData = db_conn.read(username, TableName.user_info);
+        ArrayList<String> userOnline = db_conn.read(username, TableName.online_users);
 
-            // check if user exists
-            if (!usernameToPassword.containsKey(username))
-                return LoginStatus.USER_NOT_FOUND;
-            // validate user from UserInfo.txt
-            if (!password.equals(usernameToPassword.get(username)))
-                return LoginStatus.INVALID_CREDENTIALS;
-            // check if user have logged in already
-            if (onlineUsers.containsKey(username))
-                return LoginStatus.ALREADY_LOGGED_IN;
+        // TODO: this should be atomic
+        // check if user exists
+        if (userData.isEmpty())
+            return LoginStatus.USER_NOT_FOUND;
+        // validate user from UserInfo.txt
+        if (!password.equals(userData.get(1)))
+            return LoginStatus.INVALID_CREDENTIALS;
+        // check if user have logged in already
+        if (!userOnline.isEmpty())
+            return LoginStatus.ALREADY_LOGGED_IN;
+        // write user to online_user table
+        db_conn.insert(username, password, TableName.online_users);
 
-            // add user to OnlineUsers.txt
-            BufferedWriter writer = new BufferedWriter(new FileWriter("OnlineUsers.txt", true));
-            writer.write(String.format("%s,%s%n", username, password));
-            writer.flush();
-            writer.close();
+        System.out.println("Login Successful :)");
 
-            System.out.println("Login Successful :)");
-
-            return LoginStatus.SUCCESS;
-        } catch (IOException e) {
-            e.printStackTrace();
-            return LoginStatus.FAIL;
-        }
+        return LoginStatus.SUCCESS;
     }
 
     @Override
     public RegisterStatus register(String username, String password) throws RemoteException {
-        try {
-            HashMap<String, String> usernameToPassword = getUsersInfoFromFile("UserInfo.txt");
+        // read user from DB
+        ArrayList<String> userData = db_conn.read(username, TableName.user_info);
+        // check if username already registered
+        if (!userData.isEmpty())
+            return RegisterStatus.USERNAME_ALREADY_EXISTED;
+        // write user to user_info table
+        db_conn.insert(username, password, TableName.user_info);
 
-            // check if username already registered
-            if (usernameToPassword.get(username) != null)
-                return RegisterStatus.USERNAME_ALREADY_EXISTED;
+        System.out.println("Registration Successful ;)");
 
-            // add user to UserInfo.txt
-            BufferedWriter writer = new BufferedWriter(new FileWriter("UserInfo.txt", true));
-            writer.write(String.format("%s,%s%n", username, password));
-            writer.flush();
-            writer.close();
+        if (login(username, password) != LoginStatus.SUCCESS)
+            return RegisterStatus.LOGIN_FAIL;
 
-            System.out.println("Registration Successful ;)");
-
-            if (login(username, password) != LoginStatus.SUCCESS) {
-                return RegisterStatus.LOGIN_FAIL;
-            }
-
-            return RegisterStatus.SUCCESS;
-        } catch (IOException e) {
-            e.printStackTrace();
-            return RegisterStatus.FAIL;
-        }
+        return RegisterStatus.SUCCESS;
     }
 
+    @Override
     public boolean logout(String username) throws RemoteException {
         try {
-            // read current online users
-            HashMap<String, String> onlineUsers = getUsersInfoFromFile("OnlineUsers.txt");
-            // remove the user
-            onlineUsers.remove(username);
-            // rewrite the file with remaining users
-            BufferedWriter writer = new BufferedWriter(new FileWriter("OnlineUsers.txt"));
-            for (Map.Entry<String, String> entry : onlineUsers.entrySet()) {
-                writer.write(String.format("%s,%s%n", entry.getKey(), entry.getValue()));
-            }
-            writer.flush();
-            writer.close();
+            // delete user from online_users
+            db_conn.delete(username, TableName.online_users);
 
             System.out.println("User " + username + " logged out successfully");
             return true;
-        } catch (IOException e) {
-            e.printStackTrace();
+        } catch (SQLException e) {
             return false;
         }
-    }
-
-    private HashMap<String, String> getUsersInfoFromFile(String fileName) {
-        HashMap<String, String> res = new HashMap<>();
-        File file = new File(fileName);
-        try {
-            // create file if it doesn't exist
-            if (!file.exists()) {
-                file.createNewFile();
-                return res;
-            }
-
-            FileReader fileReader = new FileReader(file);
-            BufferedReader reader = new BufferedReader(fileReader);
-
-            String line = null;
-            while ((line = reader.readLine()) != null) {
-                String[] arr = line.split(",");
-                String username_ = arr[0];
-                String password_ = arr[1];
-                res.put(username_, password_);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return res;
     }
 
     public static void main(String[] args) {
