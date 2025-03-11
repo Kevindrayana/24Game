@@ -1,5 +1,6 @@
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 public class DatabaseConnection {
     private static final String DB_HOST = "localhost";
@@ -7,7 +8,6 @@ public class DatabaseConnection {
     private static final String DB_PASS = "game24PASS";
     private static final String DB_NAME = "game24";
     private Connection conn;
-
     public DatabaseConnection() throws SQLException, InstantiationException, IllegalAccessException, ClassNotFoundException {
         Class.forName("com.mysql.jdbc.Driver").newInstance();
 
@@ -15,37 +15,86 @@ public class DatabaseConnection {
         System.out.println("Connected to database successfully!");
     }
 
-    public void insert(String name, String password, TableName tableName) {
+    public void insertUsers(String name, String password) {
         try {
-            PreparedStatement stmt = conn.prepareStatement(String.format("INSERT INTO %s (name, password) VALUES (?, ?)", tableName.name()));
+            PreparedStatement stmt = conn.prepareStatement(SqlStatements.INSERT_USERS);
             stmt.setString(1, name);
             stmt.setString(2, password);
             stmt.execute();
-            System.out.println(name + "inserted into user_info");
+            System.out.println(name + "inserted into users");
+        } catch (SQLException | IllegalArgumentException e) {
+            System.err.println("Error inserting record: "+e);
+        }
+    }
+    public void insertOnlineUsers(String name) {
+        try {
+            PreparedStatement stmt = conn.prepareStatement(SqlStatements.INSERT_ONLINE_USERS);
+            stmt.setString(1, name);
+            stmt.execute();
+            System.out.println(name + "inserted into online_users");
+        } catch (SQLException | IllegalArgumentException e) {
+            System.err.println("Error inserting record: "+e);
+        }
+    }
+    public void insertGames(String winner, int duration) {
+        try {
+            PreparedStatement stmt = conn.prepareStatement(SqlStatements.INSERT_GAMES);
+            stmt.setString(1, winner);
+            stmt.setInt(2, duration);
+            stmt.execute();
+            System.out.println("inserted into games");
+        } catch (SQLException | IllegalArgumentException e) {
+            System.err.println("Error inserting record: "+e);
+        }
+    }
+    public void insertUserToGame(int userID, int gameID) {
+        try {
+            PreparedStatement stmt = conn.prepareStatement(SqlStatements.INSERT_USER_TO_GAME);
+            stmt.setInt(1, userID);
+            stmt.setInt(2, gameID);
+            stmt.execute();
+            System.out.println("inserted into user_to_game");
         } catch (SQLException | IllegalArgumentException e) {
             System.err.println("Error inserting record: "+e);
         }
     }
 
-    public ArrayList<String> read(String name, TableName tableName) {
-        ArrayList<String> result = new ArrayList<>();
+    public HashMap<String, String> readUsers(String username) {
+        HashMap<String, String> result = new HashMap<>();
         try {
-            PreparedStatement stmt = conn.prepareStatement(String.format("SELECT * FROM %s WHERE NAME = ?", tableName.name()));
-            stmt.setString(1, name);
+            PreparedStatement stmt = conn.prepareStatement(SqlStatements.READ_USERS);
+            stmt.setString(1, username);
             ResultSet rs = stmt.executeQuery();
 
             if (!rs.next()) {
-                return result; // Return empty list if no record found
+                return result; // Return empty if no record found
             }
 
-            result.add(rs.getString("name"));    // Column names must match DB
-            result.add(rs.getString("password"));
+            result.put("name", rs.getString("name"));
+            result.put("password", rs.getString("password"));
         } catch (SQLException | IllegalArgumentException e) {
             System.err.println("Error reading record: "+e);
         }
         return result;
     }
 
+    public HashMap<String, String> readOnlineUsers(String username) {
+        HashMap<String, String> result = new HashMap<>();
+        try {
+            PreparedStatement stmt = conn.prepareStatement(SqlStatements.READ_ONLINE_USERS);
+            stmt.setString(1, username);
+            ResultSet rs = stmt.executeQuery();
+
+            if (!rs.next()) {
+                return result; // Return empty if no record found
+            }
+
+            result.put("name", rs.getString("name"));
+        } catch (SQLException | IllegalArgumentException e) {
+            System.err.println("Error reading record: "+e);
+        }
+        return result;
+    }
     public void update(String name, String newPassword) throws SQLException {
         try {
             conn.setAutoCommit(false);  // Start transaction
@@ -74,15 +123,24 @@ public class DatabaseConnection {
         }
     }
 
-    public void delete (String name, TableName tableName) throws SQLException, IllegalArgumentException{
-        PreparedStatement stmt = conn.prepareStatement(String.format("DELETE FROM %s WHERE name = ?", tableName));
-        stmt.setString(1, name);
+    public void deleteOnlineUsers(String username) throws SQLException, IllegalArgumentException{
+        PreparedStatement stmt = conn.prepareStatement(SqlStatements.DELETE_ONLINE_USERS);
+        stmt.setString(1, username);
         int rows = stmt.executeUpdate();
         if (rows > 0) {
-            System.out.println("Record of " + name + " removed");
+            System.out.println("Record of " + username + " removed");
         } else {
-            System.out.println(name + " not found!");
-            throw new IllegalArgumentException(name + " not found!");
+            System.out.println(username + " not found!");
+            throw new IllegalArgumentException(username + " not found!");
+        }
+    }
+
+    public void refreshOnlineUsers() {
+        try {
+            PreparedStatement stmt = conn.prepareStatement(SqlStatements.REFRESH_ONLINE_USERS);
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            System.err.println("Failed to refresh online_users table "+e);
         }
     }
 }

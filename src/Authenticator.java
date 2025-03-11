@@ -5,7 +5,6 @@ import java.rmi.server.UnicastRemoteObject;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Map;
 
 public class Authenticator extends UnicastRemoteObject implements Auth {
     private DatabaseConnection db_conn;
@@ -16,43 +15,29 @@ public class Authenticator extends UnicastRemoteObject implements Auth {
         // create a DB connection
         try {
             db_conn = new DatabaseConnection();
+            db_conn.refreshOnlineUsers(); // clear online_users
         } catch (SQLException | InstantiationException | IllegalAccessException | ClassNotFoundException e) {
             throw new RuntimeException(e);
-        }
-
-        // TODO: Flush the online_users table
-
-        // create OnlineUsers.txt
-        try {
-            File file = new File("OnlineUsers.txt");
-            if (file.exists()) {
-                file.delete();
-            }
-            file.createNewFile();
-        } catch (IOException e) {
-            System.err.println("Error creating OnlineUsers.txt: " + e.getMessage());
-            e.printStackTrace();
         }
     }
 
     @Override
     public LoginStatus login(String username, String password) throws RemoteException {
         // read user from DB
-        ArrayList<String> userData = db_conn.read(username, TableName.user_info);
-        ArrayList<String> userOnline = db_conn.read(username, TableName.online_users);
+        HashMap<String, String> userData = db_conn.readUsers(username);
+        HashMap<String, String> userOnline = db_conn.readOnlineUsers(username);
 
         // TODO: this should be atomic
         // check if user exists
         if (userData.isEmpty())
             return LoginStatus.USER_NOT_FOUND;
         // validate user from UserInfo.txt
-        if (!password.equals(userData.get(1)))
-            return LoginStatus.INVALID_CREDENTIALS;
+        if (!password.equals(userData.get("password"))) return LoginStatus.INVALID_CREDENTIALS;
         // check if user have logged in already
         if (!userOnline.isEmpty())
             return LoginStatus.ALREADY_LOGGED_IN;
         // write user to online_user table
-        db_conn.insert(username, password, TableName.online_users);
+        db_conn.insertOnlineUsers(username);
 
         System.out.println("Login Successful :)");
 
@@ -62,13 +47,12 @@ public class Authenticator extends UnicastRemoteObject implements Auth {
     @Override
     public RegisterStatus register(String username, String password) throws RemoteException {
         // read user from DB
-        ArrayList<String> userData = db_conn.read(username, TableName.user_info);
+        HashMap<String, String> userData = db_conn.readUsers(username);
         // check if username already registered
         if (!userData.isEmpty())
             return RegisterStatus.USERNAME_ALREADY_EXISTED;
         // write user to user_info table
-        db_conn.insert(username, password, TableName.user_info);
-
+        db_conn.insertUsers(username, password);
         System.out.println("Registration Successful ;)");
 
         if (login(username, password) != LoginStatus.SUCCESS)
@@ -81,11 +65,11 @@ public class Authenticator extends UnicastRemoteObject implements Auth {
     public boolean logout(String username) throws RemoteException {
         try {
             // delete user from online_users
-            db_conn.delete(username, TableName.online_users);
-
+            db_conn.deleteOnlineUsers(username);
             System.out.println("User " + username + " logged out successfully");
             return true;
         } catch (SQLException e) {
+            System.err.println(e);
             return false;
         }
     }

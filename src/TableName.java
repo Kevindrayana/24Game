@@ -1,4 +1,6 @@
 public enum TableName {
-    user_info,
-    online_users
+    users,
+    online_users,
+    games,
+    user_to_game
 }
