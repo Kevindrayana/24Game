@@ -31,3 +31,5 @@ bin/
 *.class
 src/OnlineUsers.txt
 src/UserInfo.txt
+
+.idea
