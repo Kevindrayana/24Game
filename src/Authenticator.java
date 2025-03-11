@@ -17,6 +17,7 @@ public class Authenticator extends UnicastRemoteObject implements Auth{
         // create a DB connection
         try {
             db_conn = new DatabaseConnection();
+            db_conn.refreshOnlineUsers(); // clear online_users
         } catch (SQLException | InstantiationException | IllegalAccessException | ClassNotFoundException e) {
             throw new RuntimeException(e);
         }
