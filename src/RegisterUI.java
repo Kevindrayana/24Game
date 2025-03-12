@@ -114,7 +114,7 @@ public class RegisterUI {
                     frame.dispose();
                     new ErrorUI("Registration failed: Server error", "register").paint();
                 }
-            } catch (RemoteException ex) {
+            } catch (Exception ex) {
                 throw new RuntimeException(ex);
             };
         }

@@ -1,3 +1,4 @@
+import javax.naming.*;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
@@ -8,17 +9,19 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
+import javax.jms.*;
 
-public class MainUI {
+public class MainUI extends JMSHandler implements MessageListener {
     private JFrame frame;
     private String username;
     private Auth authenticator;
 
-    public MainUI(String username) {
-        this.username = username;
-
+    public MainUI(String username) throws NamingException, JMSException {
+        super("localhost");
         try {
+            this.username = username;
             authenticator = (Auth) Naming.lookup("Authenticator");
+            queueReceiver.setMessageListener(this);  // Set the listener
         } catch (Exception e) {
             System.err.println("Failed accessing RMI: " + e);
         }
@@ -34,7 +37,8 @@ public class MainUI {
         tabbedPane.addTab("User Profile", userProfilePanel);
 
         // placeholder game tab
-        tabbedPane.addTab("Play Game", new JPanel());
+        JPanel playGamePanel = createPlayGamePanel();
+        tabbedPane.addTab("Play Game", playGamePanel);
 
         JPanel leaderBoardPanel = createLeaderboardPanel();
         tabbedPane.addTab("Leader Board", leaderBoardPanel);
@@ -119,44 +123,25 @@ public class MainUI {
         return panel;
     }
 
-    private JPanel createLeaderboardPanel() {
-        JPanel mainPanel = new JPanel(new BorderLayout());
-        mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+    private JPanel createPlayGamePanel() {
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
-        List<LeaderboardEntry> leaderboard = new ArrayList<>();
-        leaderboard.add(new LeaderboardEntry(1, "Alice", 15, 20, 30.5));
-        leaderboard.add(new LeaderboardEntry(2, "Bob", 13, 18, 32.1));
-        leaderboard.add(new LeaderboardEntry(3, "Charlie", 12, 17, 33.0));
-        leaderboard.add(new LeaderboardEntry(4, "David", 11, 16, 34.2));
-        leaderboard.add(new LeaderboardEntry(5, "Eve", 10, 15, 35.7));
-        leaderboard.add(new LeaderboardEntry(6, "Frank", 9, 14, 36.8));
-        leaderboard.add(new LeaderboardEntry(7, "Grace", 8, 13, 37.9));
-        leaderboard.add(new LeaderboardEntry(8, "Heidi", 7, 12, 39.0));
-        leaderboard.add(new LeaderboardEntry(9, "Ivan", 6, 11, 40.2));
-        leaderboard.add(new LeaderboardEntry(10, username, 5, 10, 41.3));
+        JLabel instructionLabel = new JLabel("Click 'New Game' to join a game session.");
+        instructionLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        String[] columnNames = { "Rank", "Username", "Wins", "Games Played", "Avg Time to Win (sec)" };
-        Object[][] data = new Object[leaderboard.size()][5];
-        for (int i = 0; i < leaderboard.size(); i++) {
-            LeaderboardEntry entry = leaderboard.get(i);
-            data[i][0] = entry.getRank();
-            data[i][1] = entry.getUsername();
-            data[i][2] = entry.getWins();
-            data[i][3] = entry.getGamesPlayed();
-            data[i][4] = String.format("%.2f", entry.getAverageTimeToWin());
-        }
+        JButton newGameButton = new JButton("New Game");
+        newGameButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+        newGameButton.addActionListener(new PlayGameListener());
 
-        JTable table = new JTable(data, columnNames);
-        table.setFillsViewportHeight(true);
-        table.setFont(new Font("Arial", Font.PLAIN, 14));
-        table.getTableHeader().setFont(new Font("Arial", Font.BOLD, 14));
-        JScrollPane scrollPane = new JScrollPane(table);
+        panel.add(Box.createVerticalGlue());
+        panel.add(instructionLabel);
+        panel.add(Box.createRigidArea(new Dimension(0, 20)));
+        panel.add(newGameButton);
+        panel.add(Box.createVerticalGlue());
 
-        JPanel panel = new JPanel(new BorderLayout());
-        panel.add(scrollPane, BorderLayout.CENTER);
-
-        mainPanel.add(panel, BorderLayout.CENTER);
-        return mainPanel;
+        return panel;
     }
 
     class LogoutButtonListener implements ActionListener {
@@ -176,4 +161,33 @@ public class MainUI {
         }
     }
 
+    class PlayGameListener implements ActionListener {
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            try {
+                createSession();
+                createSender();
+                TextMessage message = session.createTextMessage();
+                message.setStringProperty("type", "JOIN");
+                message.setText(username);
+                queueSender.send(message);
+                System.out.println("Sending message..." + message.getText());
+            } catch (Exception ex) {
+                System.err.println(ex);
+            }
+        }
+    }
+
+    @Override
+    public void onMessage(Message message) {
+        try {
+            if (message instanceof TextMessage) {
+                TextMessage textMessage = (TextMessage) message;
+                String type = textMessage.getStringProperty("type");
+                System.out.println("getting msg..." + textMessage.getText());
+            }
+        } catch (JMSException e) {
+            System.err.println("Error processing message: " + e);
+        }
+    }
 }

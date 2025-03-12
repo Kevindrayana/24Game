@@ -96,7 +96,7 @@ public class LoginUI {
                     frame.dispose();
                     new ErrorUI("Login failed: Server error", "login").paint();
                 }
-            } catch (RemoteException ex) {
+            } catch (Exception ex) {
                 throw new RuntimeException(ex);
             };
         }

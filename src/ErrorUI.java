@@ -50,14 +50,19 @@ public class ErrorUI {
         @Override
         public void actionPerformed(ActionEvent e) {
             frame.dispose();
-            if (previousPage.equals("login")) {
-                new LoginUI().paint();
-            } else if (previousPage.equals("register")) {
-                new RegisterUI().paint();
-            } else { // fail in logout
-                // in this case, previousPage is the username
-                new MainUI(previousPage).paint();
+            try {
+                if (previousPage.equals("login")) {
+                    new LoginUI().paint();
+                } else if (previousPage.equals("register")) {
+                    new RegisterUI().paint();
+                } else { // fail in logout
+                    // in this case, previousPage is the username
+                    new MainUI(previousPage).paint();
+                }
+            } catch (Exception ex) {
+                throw new RuntimeException(ex);
             }
+
         }
     }
 }
