@@ -32,4 +32,6 @@ bin/
 src/OnlineUsers.txt
 src/UserInfo.txt
 
+*.gif
+
 .idea
