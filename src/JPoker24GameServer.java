@@ -116,8 +116,14 @@ public class JPoker24GameServer implements MessageListener {
         }
     }
 
-    private void handleAnswer(TextMessage message) {
-        System.out.println("handling answer...");
+    private void handleAnswer(TextMessage message) throws JMSException {
+        String playerName = message.getStringProperty("username");
+        String gameId = message.getStringProperty("gameId");
+        String answer = message.getStringProperty("answer");
+
+        if (ExpressionEvaluator.evaluate(answer) == 24) {
+            endGame(gameId, playerName, answer);
+        }
     }
 
     private void checkStartGame() {
@@ -143,7 +149,7 @@ public class JPoker24GameServer implements MessageListener {
         Game game = new Game(gameId, players, cards);
         activeGames.put(gameId, game);
 
-        // Notify all subscribers that the game has started
+        // notify all subscribers that the game has started
         try {
             TextMessage msg = session.createTextMessage();
             msg.setStringProperty("type", "GAME_START");
@@ -153,12 +159,32 @@ public class JPoker24GameServer implements MessageListener {
                     .map(Card::toString)
                     .collect(Collectors.joining(",")));
             producer.send(msg);
-            System.out.println("Sent GAME_START to topic for game " + gameId + " with players: " + msg.getText());
+            System.out.println("Sent GAME_START to topic for game " + gameId + " with players: " + msg.getStringProperty("players"));
         } catch (JMSException e) {
             System.err.println("Error sending GAME_START message: " + e);
         }
 
         game.start();
+    }
+
+    private void endGame(String gameId, String winner, String answer) {
+        Game game = activeGames.get(gameId);
+        List<String> players = game.getPlayers();
+
+        // notify all subscribers that the game has ended
+        try {
+            TextMessage msg = session.createTextMessage();
+            msg.setStringProperty("type", "GAME_OVER");
+            msg.setStringProperty("gameId", gameId);
+            msg.setStringProperty("players", String.join(",", players)); // Send player list as message text
+            msg.setStringProperty("winner", winner);
+            msg.setStringProperty("answer", answer);
+
+            producer.send(msg);
+            System.out.println("Sent GAME_OVER to topic for game " + gameId + " with players: " + msg.getStringProperty("players") + " with winner: " + msg.getStringProperty("winner"));
+        } catch (JMSException e) {
+            System.err.println("Error sending GAME_START message: " + e);
+        }
     }
 
     private static class Game {
@@ -174,6 +200,10 @@ public class JPoker24GameServer implements MessageListener {
 
         void start() {
             System.out.println("Game " + gameId + " started with players: " + players + " and cards: " + cards);
+        }
+
+        public List<String> getPlayers() {
+            return players;
         }
     }
 

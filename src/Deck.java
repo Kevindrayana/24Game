@@ -12,8 +12,8 @@ class Deck {
     }
 
     private void initializeDeck() {
-        String[] suits = {"Hearts", "Diamonds", "Clubs", "Spades"};
-        String[] ranks = {"Ace", "2", "3", "4", "5", "6", "7", "8", "9", "10", "Jack", "Queen", "King"};
+        String[] suits = {"h", "d", "c", "s"};
+        String[] ranks = {"a", "2", "3", "4", "5", "6", "7", "8", "9", "10", "j", "q", "k"};
 
         for (String suit : suits) {
             for (String rank : ranks) {

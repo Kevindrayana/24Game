@@ -12,10 +12,10 @@ class Card {
 
     private int calculateValue(String rank) {
         switch (rank) {
-            case "Ace": return 1;
-            case "Jack": return 11;
-            case "Queen": return 12;
-            case "King": return 13;
+            case "a": return 1;
+            case "j": return 11;
+            case "q": return 12;
+            case "k": return 13;
             default: return Integer.parseInt(rank);
         }
     }
@@ -26,6 +26,6 @@ class Card {
 
     @Override
     public String toString() {
-        return rank + " of " + suit;
+        return rank + suit;
     }
 }
