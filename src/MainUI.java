@@ -11,19 +11,40 @@ import java.util.Map;
 import java.util.HashMap;
 import javax.jms.*;
 
-public class MainUI extends JMSHandler implements MessageListener {
+public class MainUI implements MessageListener {
     private JFrame frame;
     private String username;
     private Auth authenticator;
+    private Queue queue;
+    private Topic topic;
+    private Connection connection;
+    private Session session;
+    private MessageProducer sender;
+    private MessageConsumer consumer;
+    private JPanel gamePanel;
 
     public MainUI(String username) throws NamingException, JMSException {
-        super("localhost");
         try {
             this.username = username;
+            // Setup RMI
             authenticator = (Auth) Naming.lookup("Authenticator");
-            queueReceiver.setMessageListener(this);  // Set the listener
+
+            // Setup JMS
+            Context ctx = new InitialContext();
+            ConnectionFactory factory = (ConnectionFactory) ctx.lookup("jms/JPoker24GameConnectionFactory");
+            queue = (Queue) ctx.lookup("jms/JPoker24GameQueue");
+            topic = (Topic) ctx.lookup("jms/JPoker24GameTopic");
+            connection = factory.createConnection();
+
+            // setup sender (queue) and consumer (topic)
+            session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
+            sender = session.createProducer(queue);
+            consumer = session.createConsumer(topic); // Subscribe to topic
+            consumer.setMessageListener(this);
+
+            connection.start();
         } catch (Exception e) {
-            System.err.println("Failed accessing RMI: " + e);
+            System.err.println("Failed accessing RMI or JMS: " + e);
         }
     }
 
@@ -36,18 +57,21 @@ public class MainUI extends JMSHandler implements MessageListener {
         JPanel userProfilePanel = createUserProfilePanel();
         tabbedPane.addTab("User Profile", userProfilePanel);
 
-        // placeholder game tab
-        JPanel playGamePanel = createPlayGamePanel();
-        tabbedPane.addTab("Play Game", playGamePanel);
-
-        JPanel leaderBoardPanel = createLeaderboardPanel();
-        tabbedPane.addTab("Leader Board", leaderBoardPanel);
+        gamePanel = createPlayGamePanel(); // Store reference to update later
+        tabbedPane.addTab("Play Game", gamePanel);
+        tabbedPane.addTab("Leader Board", new JPanel());
 
         JPanel logoutPanel = createLogoutPanel();
         tabbedPane.addTab("Logout", logoutPanel);
 
         frame.add(tabbedPane);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override
+            public void windowClosing(java.awt.event.WindowEvent e) {
+                cleanup(); // Clean up JMS resources on close
+            }
+        });
         frame.pack();
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);
@@ -98,7 +122,6 @@ public class MainUI extends JMSHandler implements MessageListener {
         panel.add(Box.createRigidArea(new Dimension(0, 10)));
         panel.add(rankLabel);
         panel.add(Box.createVerticalGlue());
-
         return panel;
     }
 
@@ -119,7 +142,6 @@ public class MainUI extends JMSHandler implements MessageListener {
         panel.add(Box.createRigidArea(new Dimension(0, 20)));
         panel.add(logoutButton);
         panel.add(Box.createVerticalGlue());
-
         return panel;
     }
 
@@ -140,7 +162,6 @@ public class MainUI extends JMSHandler implements MessageListener {
         panel.add(Box.createRigidArea(new Dimension(0, 20)));
         panel.add(newGameButton);
         panel.add(Box.createVerticalGlue());
-
         return panel;
     }
 
@@ -150,9 +171,11 @@ public class MainUI extends JMSHandler implements MessageListener {
             try {
                 if (authenticator.logout(username)) {
                     frame.dispose();
+                    cleanup(); // Clean up JMS resources
                     new LoginUI().paint();
                 } else {
                     frame.dispose();
+                    cleanup(); // Clean up JMS resources
                     new ErrorUI("Logout failed", username).paint();
                 }
             } catch (RemoteException ex) {
@@ -165,15 +188,15 @@ public class MainUI extends JMSHandler implements MessageListener {
         @Override
         public void actionPerformed(ActionEvent e) {
             try {
-                createSession();
-                createSender();
                 TextMessage message = session.createTextMessage();
                 message.setStringProperty("type", "JOIN");
-                message.setText(username);
-                queueSender.send(message);
-                System.out.println("Sending message..." + message.getText());
-            } catch (Exception ex) {
-                System.err.println(ex);
+                message.setStringProperty("username", username);
+                message.setLongProperty("timestamp", System.currentTimeMillis());
+                sender.send(message);
+                System.out.println("Joining game as: " + username);
+            } catch (JMSException ex) {
+                System.err.println("Failed to send JOIN message: " + ex);
+                JOptionPane.showMessageDialog(frame, "Failed to join game: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
             }
         }
     }
@@ -182,12 +205,65 @@ public class MainUI extends JMSHandler implements MessageListener {
     public void onMessage(Message message) {
         try {
             if (message instanceof TextMessage) {
-                TextMessage textMessage = (TextMessage) message;
-                String type = textMessage.getStringProperty("type");
-                System.out.println("getting msg..." + textMessage.getText());
+                TextMessage msg = (TextMessage) message;
+                String type = msg.getStringProperty("type");
+                String playersList = message.getStringProperty("players"); // Comma-separated players
+
+                if (type != null && playersList.contains(username)) {
+                    switch (type) {
+                        case "GAME_START":
+                            handleGameStart(msg);
+                            break;
+                    }
+                }
             }
         } catch (JMSException e) {
             System.err.println("Error processing message: " + e);
+        }
+    }
+
+    void handleGameStart(TextMessage message) throws JMSException {
+        String gameId = message.getStringProperty("gameId");
+        String playersList = message.getStringProperty("players"); // Comma-separated players
+        String cardsString = message.getStringProperty("cards"); // Comma-separated cards
+
+        System.out.println("Game " + gameId + " started with players: " + playersList + " and cards: " + cardsString);
+
+        // Update the Play Game tab with game details
+        gamePanel.removeAll(); // Clear existing content
+        gamePanel.setLayout(new BoxLayout(gamePanel, BoxLayout.Y_AXIS));
+
+        JLabel gameLabel = new JLabel("Game Started (ID: " + gameId + ")");
+        gameLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        JLabel playersLabel = new JLabel("Players: " + playersList);
+        playersLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        JLabel cardsLabel = new JLabel("Cards: " + cardsString);
+        cardsLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        gamePanel.add(Box.createVerticalGlue());
+        gamePanel.add(gameLabel);
+        gamePanel.add(Box.createRigidArea(new Dimension(0, 10)));
+        gamePanel.add(playersLabel);
+        gamePanel.add(Box.createRigidArea(new Dimension(0, 10)));
+        gamePanel.add(cardsLabel);
+        gamePanel.add(Box.createVerticalGlue());
+
+        gamePanel.revalidate();
+        gamePanel.repaint();
+
+        // Switch to the "Play Game" tab
+        JTabbedPane tabbedPane = (JTabbedPane) frame.getContentPane().getComponent(0);
+        tabbedPane.setSelectedIndex(1);
+    }
+
+    private void cleanup() {
+        try {
+            if (sender != null) sender.close();
+            if (consumer != null) consumer.close();
+            if (session != null) session.close();
+            if (connection != null) connection.close();
+        } catch (JMSException e) {
+            System.err.println("Error closing JMS resources: " + e);
         }
     }
 }
