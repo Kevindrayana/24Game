@@ -36,24 +36,26 @@ public class JPoker24GameServer implements MessageListener {
     private Session session;
     private MessageConsumer receiver;
     private MessageProducer producer;
-
+    private UserServiceImpl userService;
     public JPoker24GameServer() throws NamingException, JMSException {
         try {
-            // Setup RMI
+            // setup RMI
             Authenticator app = new Authenticator();
+            userService = new UserServiceImpl();
             Registry registry = LocateRegistry.createRegistry(1099);
             System.setSecurityManager(new SecurityManager());
             Naming.rebind("Authenticator", app);
+            Naming.rebind("UserService", userService);
             System.out.println("Service registered!");
 
-            // Setup JMS
+            // setup JMS
             Context ctx = new InitialContext();
             ConnectionFactory factory = (ConnectionFactory) ctx.lookup("jms/JPoker24GameConnectionFactory");
             Queue queue = (Queue) ctx.lookup("jms/JPoker24GameQueue");
             Topic topic = (Topic) ctx.lookup("jms/JPoker24GameTopic");
             connection = factory.createConnection();
 
-            // Setup receiver (queue) and producer (topic)
+            // setup receiver (queue) and producer (topic)
             session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
             receiver = session.createConsumer(queue);
             receiver.setMessageListener(this);
@@ -71,7 +73,7 @@ public class JPoker24GameServer implements MessageListener {
         try {
             JPoker24GameServer server = new JPoker24GameServer();
             System.out.println("Server running. Press Ctrl+C to stop.");
-            Thread.currentThread().join(); // Keep server alive
+//            Thread.currentThread().join(); // keep server alive
         } catch (Exception e) {
             System.err.println("Exception thrown: " + e);
         }
@@ -105,7 +107,8 @@ public class JPoker24GameServer implements MessageListener {
             waitingPlayers.add(player);
             System.out.println(waitingPlayers.toString());
             long currentTime = System.currentTimeMillis();
-            if (waitingPlayers.size() >= 4 || (!waitingPlayers.isEmpty() && waitingPlayers.size() >= 2 &&  (currentTime - waitingPlayers.get(0).getTimestamp() >= 10000))) {
+            if (waitingPlayers.size() >= 4 || (!waitingPlayers.isEmpty() && waitingPlayers.size() >= 2
+                    && (currentTime - waitingPlayers.get(0).getTimestamp() >= 10000))) {
                 String[] gamePlayers = waitingPlayers.stream()
                         .limit(4)
                         .map(WaitingPlayer::getPlayername)
@@ -127,7 +130,6 @@ public class JPoker24GameServer implements MessageListener {
     }
 
     private void checkStartGame() {
-        System.out.println("checking...");
         synchronized (waitingPlayers) {
             long currentTime = System.currentTimeMillis();
             if (!waitingPlayers.isEmpty() &&
@@ -154,12 +156,13 @@ public class JPoker24GameServer implements MessageListener {
             TextMessage msg = session.createTextMessage();
             msg.setStringProperty("type", "GAME_START");
             msg.setStringProperty("gameId", gameId);
-            msg.setStringProperty("players", String.join(",", players)); // Send player list as message text
+            msg.setStringProperty("players", String.join(",", players));
             msg.setStringProperty("cards", cards.stream()
                     .map(Card::toString)
                     .collect(Collectors.joining(",")));
             producer.send(msg);
-            System.out.println("Sent GAME_START to topic for game " + gameId + " with players: " + msg.getStringProperty("players"));
+            System.out.println("Sent GAME_START to topic for game " + gameId + " with players: "
+                    + msg.getStringProperty("players"));
         } catch (JMSException e) {
             System.err.println("Error sending GAME_START message: " + e);
         }
@@ -169,7 +172,19 @@ public class JPoker24GameServer implements MessageListener {
 
     private void endGame(String gameId, String winner, String answer) {
         Game game = activeGames.get(gameId);
+        int duration = (int) (System.currentTimeMillis() - game.getStartAt()) / 1000; //duration of game in seconds
         List<String> players = game.getPlayers();
+
+        // insert to DB
+        try {
+            userService.insertGame(gameId, winner, duration);
+            for (String player : players) {
+                userService.insertUserToGame(player, gameId);
+            }
+        } catch (RemoteException ex) {
+            System.err.println("Error inserting to DB: " + ex);
+        }
+
 
         // notify all subscribers that the game has ended
         try {
@@ -179,9 +194,9 @@ public class JPoker24GameServer implements MessageListener {
             msg.setStringProperty("players", String.join(",", players)); // Send player list as message text
             msg.setStringProperty("winner", winner);
             msg.setStringProperty("answer", answer);
-
+            msg.setIntProperty("duration", duration);
             producer.send(msg);
-            System.out.println("Sent GAME_OVER to topic for game " + gameId + " with players: " + msg.getStringProperty("players") + " with winner: " + msg.getStringProperty("winner"));
+            System.out.println("Sent GAME_OVER to topic for game " + gameId + " with players: " + msg.getStringProperty("players") + " with winner: " + msg.getStringProperty("winner") + " with duration: " + msg.getIntProperty("duration"));
         } catch (JMSException e) {
             System.err.println("Error sending GAME_START message: " + e);
         }
@@ -191,11 +206,13 @@ public class JPoker24GameServer implements MessageListener {
         private String gameId;
         private List<String> players;
         private List<Card> cards;
+        private long startAt;
 
         Game(String gameId, String[] players, List<Card> cards) {
             this.gameId = gameId;
-            this.players = new ArrayList<>(Arrays.asList(players)); // Convert array to list
+            this.players = new ArrayList<>(Arrays.asList(players));
             this.cards = new ArrayList<>(cards);
+            this.startAt = System.currentTimeMillis();
         }
 
         void start() {
@@ -204,6 +221,10 @@ public class JPoker24GameServer implements MessageListener {
 
         public List<String> getPlayers() {
             return players;
+        }
+
+        public long getStartAt() {
+            return startAt;
         }
     }
 

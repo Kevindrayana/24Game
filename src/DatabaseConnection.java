@@ -1,6 +1,7 @@
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 public class DatabaseConnection {
     private static final String DB_HOST = "localhost";
@@ -9,12 +10,10 @@ public class DatabaseConnection {
     private static final String DB_NAME = "game24";
     private Connection conn;
 
-    public DatabaseConnection()
-            throws SQLException, InstantiationException, IllegalAccessException, ClassNotFoundException {
+    public DatabaseConnection() throws SQLException, InstantiationException, IllegalAccessException, ClassNotFoundException {
         Class.forName("com.mysql.jdbc.Driver").newInstance();
 
-        conn = DriverManager
-                .getConnection("jdbc:mysql://" + DB_HOST + "/" + DB_NAME + "?user=" + DB_USER + "&password=" + DB_PASS);
+        conn = DriverManager.getConnection("jdbc:mysql://" + DB_HOST + "/" + DB_NAME + "?user=" + DB_USER + "&password=" + DB_PASS);
         System.out.println("Connected to database successfully!");
     }
 
@@ -44,9 +43,10 @@ public class DatabaseConnection {
             stmt.execute();
             System.out.println(name + "inserted into users");
         } catch (SQLException | IllegalArgumentException e) {
-            System.err.println("Error inserting record: " + e);
+            System.err.println("Error inserting users: " + e);
         }
     }
+
 
     public void insertOnlineUsers(String name) {
         try {
@@ -55,19 +55,20 @@ public class DatabaseConnection {
             stmt.execute();
             System.out.println(name + "inserted into online_users");
         } catch (SQLException | IllegalArgumentException e) {
-            System.err.println("Error inserting record: " + e);
+            System.err.println("Error inserting online users: " + e);
         }
     }
 
-    public void insertGames(String winner, int duration) {
+    public void insertGames(String gameId, String winner, int duration) {
         try {
             PreparedStatement stmt = conn.prepareStatement(SqlStatements.INSERT_GAMES);
-            stmt.setString(1, winner);
-            stmt.setInt(2, duration);
+            stmt.setString(1, gameId);
+            stmt.setString(2, winner);
+            stmt.setInt(3, duration);
             stmt.execute();
             System.out.println("inserted into games");
         } catch (SQLException | IllegalArgumentException e) {
-            System.err.println("Error inserting record: " + e);
+            System.err.println("Error inserting game: " + e);
         }
     }
 
@@ -79,7 +80,19 @@ public class DatabaseConnection {
             stmt.execute();
             System.out.println("inserted into user_to_game");
         } catch (SQLException | IllegalArgumentException e) {
-            System.err.println("Error inserting record: " + e);
+            System.err.println("Error inserting user to game: " + e);
+        }
+    }
+
+    public void insertUserToGame(String username, String gameID) {
+        try {
+            PreparedStatement stmt = conn.prepareStatement(SqlStatements.INSERT_USER_TO_GAME_);
+            stmt.setString(1, username);
+            stmt.setString(2, gameID);
+            stmt.execute();
+            System.out.println("inserted into user_to_game");
+        } catch (SQLException | IllegalArgumentException e) {
+            System.err.println("Error inserting user to game: " + e);
         }
     }
 
@@ -97,7 +110,7 @@ public class DatabaseConnection {
             result.put("name", rs.getString("name"));
             result.put("password", rs.getString("password"));
         } catch (SQLException | IllegalArgumentException e) {
-            System.err.println("Error reading record: " + e);
+            System.err.println("Error reading users: " + e);
         }
         return result;
     }
@@ -110,12 +123,102 @@ public class DatabaseConnection {
             ResultSet rs = stmt.executeQuery();
 
             if (!rs.next()) {
-                return result; // Return empty if no record found
+                return result;
             }
 
             result.put("name", rs.getString("name"));
         } catch (SQLException | IllegalArgumentException e) {
-            System.err.println("Error reading record: " + e);
+            System.err.println("Error reading online users: " + e);
+        }
+        return result;
+    }
+
+    public int readUserWins(String username) {
+        int result = 0;
+        try {
+            PreparedStatement stmt = conn.prepareStatement(SqlStatements.READ_USER_WINS);
+            stmt.setString(1, username);
+            ResultSet rs = stmt.executeQuery();
+
+            if (!rs.next()) {
+                return result;
+            }
+            result = rs.getInt("wins");
+        } catch (SQLException | IllegalArgumentException e) {
+            System.err.println("Error reading user wins: " + e);
+        }
+        return result;
+    }
+
+    public int readGamesPlayed(String username) {
+        int result = 0;
+        try {
+            PreparedStatement stmt = conn.prepareStatement(SqlStatements.READ_GAMES_PLAYED);
+            stmt.setString(1, username);
+            ResultSet rs = stmt.executeQuery();
+
+            if (!rs.next()) {
+                return result;
+            }
+            result = rs.getInt("games_played");
+        } catch (SQLException | IllegalArgumentException e) {
+            System.err.println("Error reading games played: " + e);
+        }
+        return result;
+    }
+
+    public double readAvgTimeToWin(String username) {
+        String query = "SELECT AVG(duration) FROM games WHERE winner = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(query)) {
+            stmt.setString(1, username);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                return rs.getDouble(1);
+            }
+            return 0.0;
+        } catch (SQLException e) {
+            System.err.println("Error reading avg time to win: " + e);
+            return 0.0;
+        }
+    }
+
+    public int readUserRank(String username) {
+        int result = 0;
+        try {
+            PreparedStatement stmt = conn.prepareStatement(SqlStatements.READ_USER_RANK);
+            stmt.setString(1, username);
+            ResultSet rs = stmt.executeQuery();
+
+            if (!rs.next()) {
+                return result;
+            }
+            result = rs.getInt("rank");
+        } catch (SQLException | IllegalArgumentException e) {
+            System.err.println("Error reading user rank: " + e);
+        }
+        return result;
+    }
+
+    public List<LeaderboardEntry> readLeaderboard() {
+        List<LeaderboardEntry> result = new ArrayList<>();
+
+        try {
+            PreparedStatement stmt = conn.prepareStatement(SqlStatements.READ_LEADERBOARD);
+            ResultSet rs = stmt.executeQuery();
+
+            while (rs.next()) {
+                int rank = rs.getInt("rank");
+                String name = rs.getString("name");
+                int wins = rs.getInt("wins");
+                int games_played = rs.getInt("games_played");
+                double avg_time_to_win = rs.getDouble("avg_time_to_win");
+
+                LeaderboardEntry entry = new LeaderboardEntry(rank, name, wins, games_played, avg_time_to_win);
+                result.add(entry);
+            }
+
+        } catch (SQLException | IllegalArgumentException e) {
+            System.err.println("Error reading leaderboard: " + e);
         }
         return result;
     }
@@ -141,10 +244,10 @@ public class DatabaseConnection {
             conn.commit();
             System.out.println("Password of " + name + " updated");
         } catch (SQLException e) {
-            conn.rollback(); // Rollback if error occurs
+            conn.rollback();
             throw e;
         } finally {
-            conn.setAutoCommit(true); // Reset to default
+            conn.setAutoCommit(true); // reset to default
         }
     }
 
@@ -168,4 +271,5 @@ public class DatabaseConnection {
             System.err.println("Failed to refresh online_users table " + e);
         }
     }
+
 }

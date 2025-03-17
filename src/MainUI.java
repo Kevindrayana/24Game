@@ -9,14 +9,18 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
+import javax.jms.Connection;
 import java.io.File;
 import javax.jms.*;
 import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 
 public class MainUI implements MessageListener {
     private JFrame frame;
     private String username;
     private Auth authenticator;
+    private UserService userService;
     private Queue queue;
     private Topic topic;
     private Connection connection;
@@ -30,7 +34,8 @@ public class MainUI implements MessageListener {
     public MainUI(String username) throws NamingException, JMSException {
         try {
             this.username = username;
-            authenticator = (Auth) Naming.lookup("Authenticator");
+            authenticator = (Auth) Naming.lookup("rmi://localhost:1099/Authenticator");
+            userService = (UserService) Naming.lookup("rmi://localhost:1099/UserService");
 
             Context ctx = new InitialContext();
             ConnectionFactory factory = (ConnectionFactory) ctx.lookup("jms/JPoker24GameConnectionFactory");
@@ -60,7 +65,9 @@ public class MainUI implements MessageListener {
 
         gamePanel = createPlayGamePanel();
         tabbedPane.addTab("Play Game", gamePanel);
-        tabbedPane.addTab("Leader Board", new JPanel());
+
+        JPanel leaderboardPanel = createLeaderboardPanel();
+        tabbedPane.addTab("Leader Board", leaderboardPanel);
 
         JPanel logoutPanel = createLogoutPanel();
         tabbedPane.addTab("Logout", logoutPanel);
@@ -83,67 +90,123 @@ public class MainUI implements MessageListener {
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
-        // Username display
+        // refresh button at the top
+        JButton refreshButton = new JButton("Refresh");
+        refreshButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+        refreshButton.addActionListener(e -> {
+            Container parent = panel.getParent();
+            if (parent instanceof JTabbedPane) {
+                JTabbedPane tabbedPane = (JTabbedPane) parent;
+                int index = tabbedPane.indexOfComponent(panel);
+                tabbedPane.setComponentAt(index, createUserProfilePanel());
+                frame.revalidate();
+                frame.repaint();
+            }
+        });
+
+        panel.add(refreshButton);
+        panel.add(Box.createRigidArea(new Dimension(0, 20)));
+
         JLabel welcomeLabel = new JLabel("Welcome, " + username);
         welcomeLabel.setFont(new Font("Arial", Font.BOLD, 24));
         welcomeLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        Map<String, Object> userInfo = new HashMap<>();
-        userInfo.put("wins", 0);
-        userInfo.put("gamesPlayed", 0);
-        userInfo.put("averageTimeToWin", 0.0);
-        userInfo.put("rank", 0);
+        try {
+            Map<String, Object> userInfo = userService.getUserInfo(username);
 
-        JLabel winsLabel = new JLabel("Wins: " + userInfo.get("wins"));
-        winsLabel.setFont(new Font("Arial", Font.PLAIN, 16));
-        winsLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+            JLabel winsLabel = new JLabel("Wins: " + userInfo.get("wins"));
+            winsLabel.setFont(new Font("Arial", Font.PLAIN, 16));
+            winsLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        JLabel gamesPlayedLabel = new JLabel("Games Played: " + userInfo.get("gamesPlayed"));
-        gamesPlayedLabel.setFont(new Font("Arial", Font.PLAIN, 16));
-        gamesPlayedLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+            JLabel gamesPlayedLabel = new JLabel("Games Played: " + userInfo.get("gamesPlayed"));
+            gamesPlayedLabel.setFont(new Font("Arial", Font.PLAIN, 16));
+            gamesPlayedLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        Object avgTimeObj = userInfo.get("averageTimeToWin");
-        double avgTime = (avgTimeObj instanceof Number) ? ((Number) avgTimeObj).doubleValue() : 0.0;
-        JLabel avgTimeLabel = new JLabel("Average Time to Win: " + String.format("%.2f", avgTime) + " sec");
-        avgTimeLabel.setFont(new Font("Arial", Font.PLAIN, 16));
-        avgTimeLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+            // Safely convert averageTimeToWin to Double
+            Object avgTimeObj = userInfo.get("averageTimeToWin");
+            double avgTime = (avgTimeObj instanceof Number) ? ((Number) avgTimeObj).doubleValue() : 0.0;
+            JLabel avgTimeLabel = new JLabel("Average Time to Win: " + String.format("%.2f", avgTime) + " sec");
+            avgTimeLabel.setFont(new Font("Arial", Font.PLAIN, 16));
+            avgTimeLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        JLabel rankLabel = new JLabel("Rank: " + userInfo.get("rank"));
-        rankLabel.setFont(new Font("Arial", Font.PLAIN, 16));
-        rankLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+            JLabel rankLabel = new JLabel("Rank: " + userInfo.get("rank"));
+            rankLabel.setFont(new Font("Arial", Font.PLAIN, 16));
+            rankLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        panel.add(Box.createVerticalGlue());
-        panel.add(welcomeLabel);
-        panel.add(Box.createRigidArea(new Dimension(0, 20)));
-        panel.add(winsLabel);
-        panel.add(Box.createRigidArea(new Dimension(0, 10)));
-        panel.add(gamesPlayedLabel);
-        panel.add(Box.createRigidArea(new Dimension(0, 10)));
-        panel.add(avgTimeLabel);
-        panel.add(Box.createRigidArea(new Dimension(0, 10)));
-        panel.add(rankLabel);
-        panel.add(Box.createVerticalGlue());
+            panel.add(Box.createVerticalGlue());
+            panel.add(welcomeLabel);
+            panel.add(Box.createRigidArea(new Dimension(0, 20)));
+            panel.add(winsLabel);
+            panel.add(Box.createRigidArea(new Dimension(0, 10)));
+            panel.add(gamesPlayedLabel);
+            panel.add(Box.createRigidArea(new Dimension(0, 10)));
+            panel.add(avgTimeLabel);
+            panel.add(Box.createRigidArea(new Dimension(0, 10)));
+            panel.add(rankLabel);
+            panel.add(Box.createVerticalGlue());
+        } catch (RemoteException e) {
+            System.err.println("Failed to fetch user info: " + e);
+            JLabel errorLabel = new JLabel("Unable to load user stats");
+            errorLabel.setFont(new Font("Arial", Font.PLAIN, 16));
+            errorLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+            panel.add(errorLabel);
+        }
+
         return panel;
     }
 
-    private JPanel createLogoutPanel() {
-        JPanel panel = new JPanel();
-        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+    private JPanel createLeaderboardPanel() {
+        JPanel mainPanel = new JPanel(new BorderLayout());
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
-        JLabel confirmLabel = new JLabel("Are you sure you want to logout?");
-        confirmLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        // refresh button at the top
+        JButton refreshButton = new JButton("Refresh");
+        mainPanel.add(refreshButton, BorderLayout.NORTH);
 
-        JButton logoutButton = new JButton("Confirm Logout");
-        logoutButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-        logoutButton.addActionListener(new LogoutButtonListener());
+        JPanel panel = new JPanel(new BorderLayout());
 
-        panel.add(Box.createVerticalGlue());
-        panel.add(confirmLabel);
-        panel.add(Box.createRigidArea(new Dimension(0, 20)));
-        panel.add(logoutButton);
-        panel.add(Box.createVerticalGlue());
-        return panel;
+        refreshButton.addActionListener(e -> {
+            Container parent = mainPanel.getParent();
+            if (parent instanceof JTabbedPane) {
+                JTabbedPane tabbedPane = (JTabbedPane) parent;
+                int index = tabbedPane.indexOfComponent(mainPanel);
+                tabbedPane.setComponentAt(index, createLeaderboardPanel());
+                frame.revalidate();
+                frame.repaint();
+            }
+        });
+
+        try {
+            List<LeaderboardEntry> leaderboard = userService.getLeaderboard();
+
+            String[] columnNames = { "Rank", "Username", "Wins", "Games Played", "Avg Time to Win (sec)" };
+            Object[][] data = new Object[leaderboard.size()][5];
+            for (int i = 0; i < leaderboard.size(); i++) {
+                LeaderboardEntry entry = leaderboard.get(i);
+                data[i][0] = i + 1; // Rank starts at 1
+                data[i][1] = entry.getUsername();
+                data[i][2] = entry.getWins();
+                data[i][3] = entry.getGamesPlayed();
+                data[i][4] = String.format("%.2f", entry.getAverageTimeToWin());
+            }
+
+            JTable table = new JTable(data, columnNames);
+            table.setFillsViewportHeight(true);
+            table.setFont(new Font("Arial", Font.PLAIN, 14));
+            table.getTableHeader().setFont(new Font("Arial", Font.BOLD, 14));
+            JScrollPane scrollPane = new JScrollPane(table);
+
+            panel.add(scrollPane, BorderLayout.CENTER);
+        } catch (RemoteException e) {
+            System.err.println("Failed to fetch leaderboard: " + e);
+            JLabel errorLabel = new JLabel("Unable to load leaderboard");
+            errorLabel.setFont(new Font("Arial", Font.PLAIN, 16));
+            errorLabel.setHorizontalAlignment(SwingConstants.CENTER);
+            panel.add(errorLabel, BorderLayout.CENTER);
+        }
+
+        mainPanel.add(panel, BorderLayout.CENTER);
+        return mainPanel;
     }
 
     private JPanel createPlayGamePanel() {
@@ -209,7 +272,6 @@ public class MainUI implements MessageListener {
         @Override
         public void actionPerformed(ActionEvent e) {
             try {
-                // Send JOIN message
                 TextMessage message = session.createTextMessage();
                 message.setStringProperty("type", "JOIN");
                 message.setStringProperty("username", username);
@@ -217,7 +279,6 @@ public class MainUI implements MessageListener {
                 sender.send(message);
                 System.out.println("Joining game as: " + username);
 
-                // Update UI to "Waiting for players..."
                 gamePanel.removeAll();
                 gamePanel.setLayout(new BoxLayout(gamePanel, BoxLayout.Y_AXIS));
                 JLabel waitingLabel = new JLabel("Waiting for players...");
@@ -229,12 +290,12 @@ public class MainUI implements MessageListener {
                 gamePanel.revalidate();
                 gamePanel.repaint();
 
-                // Switch to Play Game tab
                 JTabbedPane tabbedPane = (JTabbedPane) frame.getContentPane().getComponent(0);
                 tabbedPane.setSelectedIndex(1);
             } catch (JMSException ex) {
                 System.err.println("Failed to send JOIN message: " + ex);
-                JOptionPane.showMessageDialog(frame, "Failed to join game: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(frame, "Failed to join game: " + ex.getMessage(), "Error",
+                        JOptionPane.ERROR_MESSAGE);
             }
         }
     }
@@ -253,7 +314,8 @@ public class MainUI implements MessageListener {
                 System.out.println("Sending answer: " + expressionField.getText());
             } catch (JMSException ex) {
                 System.err.println("Failed to send ANSWER message: " + ex);
-                JOptionPane.showMessageDialog(frame, "Failed to submit answer: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(frame, "Failed to submit answer: " + ex.getMessage(), "Error",
+                        JOptionPane.ERROR_MESSAGE);
             }
         }
     }
@@ -287,12 +349,9 @@ public class MainUI implements MessageListener {
         String playersList = message.getStringProperty("players");
         String cardsString = message.getStringProperty("cards");
 
-        System.out.println("Game " + gameId + " started with players: " + playersList + " and cards: " + cardsString);
-
         gamePanel.removeAll();
         gamePanel.setLayout(new BorderLayout());
 
-        // Center: Display card images
         JPanel cardsPanel = new JPanel();
         cardsPanel.setLayout(new FlowLayout());
         String[] cards = cardsString.split(",");
@@ -319,9 +378,9 @@ public class MainUI implements MessageListener {
         }
         gamePanel.add(cardsPanel, BorderLayout.CENTER);
 
-        // East: Display players list
         JPanel playersPanel = new JPanel();
         playersPanel.setLayout(new BoxLayout(playersPanel, BoxLayout.Y_AXIS));
+        playersPanel.setPreferredSize(new Dimension(200, 0));
         playersPanel.setBorder(BorderFactory.createTitledBorder("Players"));
         String[] players = playersList.split(",");
         for (String player : players) {
@@ -330,7 +389,6 @@ public class MainUI implements MessageListener {
         }
         gamePanel.add(playersPanel, BorderLayout.EAST);
 
-        // South: Input field and buttons
         JPanel inputPanel = new JPanel();
         inputPanel.setLayout(new BoxLayout(inputPanel, BoxLayout.Y_AXIS));
 
@@ -354,7 +412,6 @@ public class MainUI implements MessageListener {
 
         gamePanel.add(inputPanel, BorderLayout.SOUTH);
 
-        // North: Game ID label
         JLabel gameLabel = new JLabel("Game ID: " + gameId);
         gameLabel.setHorizontalAlignment(SwingConstants.CENTER);
         gamePanel.add(gameLabel, BorderLayout.NORTH);
@@ -370,43 +427,57 @@ public class MainUI implements MessageListener {
         gameId = message.getStringProperty("gameId");
         String winner = message.getStringProperty("winner");
         String answer = message.getStringProperty("answer");
+        int duration = message.getIntProperty("duration");
 
         System.out.println("Game " + gameId + " over. Winner: " + winner + ", Answer: " + answer);
 
-        // Clear and update UI
         gamePanel.removeAll();
         gamePanel.setLayout(new BoxLayout(gamePanel, BoxLayout.Y_AXIS));
 
-        // Winner message
         JLabel winnerLabel = new JLabel("Winner of game " + gameId + " is " + winner + "!");
         winnerLabel.setFont(new Font("Arial", Font.BOLD, 20));
         winnerLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        // Winning expression
         JLabel answerLabel = new JLabel("Winning Expression: " + answer);
         answerLabel.setFont(new Font("Arial", Font.PLAIN, 16));
         answerLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        JLabel durationLabel = new JLabel("Finished in " + duration + " seconds");
+        durationLabel.setFont(new Font("Arial", Font.PLAIN, 16));
+        durationLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         gamePanel.add(Box.createVerticalGlue());
         gamePanel.add(winnerLabel);
         gamePanel.add(Box.createRigidArea(new Dimension(0, 20)));
         gamePanel.add(answerLabel);
+        gamePanel.add(Box.createRigidArea(new Dimension(0, 20)));
+        gamePanel.add(durationLabel);
         gamePanel.add(Box.createVerticalGlue());
+
+        JButton newGameButton = new JButton("New Game");
+        newGameButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+        newGameButton.addActionListener(new PlayGameListener());
+        gamePanel.add(newGameButton);
 
         gamePanel.revalidate();
         gamePanel.repaint();
 
-        // Switch to Play Game tab
+
+
         JTabbedPane tabbedPane = (JTabbedPane) frame.getContentPane().getComponent(0);
         tabbedPane.setSelectedIndex(1);
     }
 
     private void cleanup() {
         try {
-            if (sender != null) sender.close();
-            if (consumer != null) consumer.close();
-            if (session != null) session.close();
-            if (connection != null) connection.close();
+            if (sender != null)
+                sender.close();
+            if (consumer != null)
+                consumer.close();
+            if (session != null)
+                session.close();
+            if (connection != null)
+                connection.close();
         } catch (JMSException e) {
             System.err.println("Error closing JMS resources: " + e);
         }

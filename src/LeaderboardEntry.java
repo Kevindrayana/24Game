@@ -1,4 +1,6 @@
-public class LeaderboardEntry {
+import java.io.Serializable;
+
+public class LeaderboardEntry implements Serializable {
     private int rank;
     private String username;
     private int wins;
@@ -13,22 +15,16 @@ public class LeaderboardEntry {
         this.averageTimeToWin = averageTimeToWin;
     }
 
-    public int getRank() {
-        return rank;
-    }
-
+    public int getRank() { return rank; }
     public String getUsername() {
         return username;
     }
-
     public int getWins() {
         return wins;
     }
-
     public int getGamesPlayed() {
         return gamesPlayed;
     }
-
     public double getAverageTimeToWin() {
         return averageTimeToWin;
     }

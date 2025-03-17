@@ -14,7 +14,6 @@ public class Authenticator extends UnicastRemoteObject implements Auth{
     public Authenticator() throws RemoteException{
         super();
 
-        // create a DB connection
         try {
             db_conn = new DatabaseConnection();
             db_conn.refreshOnlineUsers(); // clear online_users

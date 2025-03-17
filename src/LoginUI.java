@@ -20,7 +20,6 @@ public class LoginUI {
     public void paint() {
         frame = new JFrame("Login");
 
-        // Create mainPanel with BoxLayout for vertical arrangement
         JPanel mainPanel = new JPanel();
         mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
         mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10)); // Add padding
@@ -43,7 +42,6 @@ public class LoginUI {
         passwordPanel.add(passwordField);
         passwordPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        // Add components to mainPanel with spacing
         mainPanel.add(Box.createRigidArea(new Dimension(0, 10)));
         mainPanel.add(usernamePanel);
         mainPanel.add(Box.createRigidArea(new Dimension(0, 10)));
