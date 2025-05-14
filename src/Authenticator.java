@@ -5,8 +5,8 @@ import java.rmi.server.UnicastRemoteObject;
 import java.util.HashMap;
 import java.util.Map;
 
-public class Authenticator extends UnicastRemoteObject implements Auth{
-    public Authenticator() throws RemoteException{
+public class Authenticator extends UnicastRemoteObject implements Auth {
+    public Authenticator() throws RemoteException {
         super();
 
         // create OnlineUsers.txt
@@ -23,17 +23,20 @@ public class Authenticator extends UnicastRemoteObject implements Auth{
     }
 
     @Override
-    public LoginStatus login(String username, String password) throws RemoteException{
+    public LoginStatus login(String username, String password) throws RemoteException {
         try {
             HashMap<String, String> usernameToPassword = getUsersInfoFromFile("UserInfo.txt");
             HashMap<String, String> onlineUsers = getUsersInfoFromFile("OnlineUsers.txt");
 
             // check if user exists
-            if (!usernameToPassword.containsKey(username)) return LoginStatus.USER_NOT_FOUND;
+            if (!usernameToPassword.containsKey(username))
+                return LoginStatus.USER_NOT_FOUND;
             // validate user from UserInfo.txt
-            if (!password.equals(usernameToPassword.get(username))) return LoginStatus.INVALID_CREDENTIALS;
+            if (!password.equals(usernameToPassword.get(username)))
+                return LoginStatus.INVALID_CREDENTIALS;
             // check if user have logged in already
-            if (onlineUsers.containsKey(username)) return LoginStatus.ALREADY_LOGGED_IN;
+            if (onlineUsers.containsKey(username))
+                return LoginStatus.ALREADY_LOGGED_IN;
 
             // add user to OnlineUsers.txt
             BufferedWriter writer = new BufferedWriter(new FileWriter("OnlineUsers.txt", true));
@@ -56,7 +59,8 @@ public class Authenticator extends UnicastRemoteObject implements Auth{
             HashMap<String, String> usernameToPassword = getUsersInfoFromFile("UserInfo.txt");
 
             // check if username already registered
-            if (usernameToPassword.get(username) != null) return RegisterStatus.USERNAME_ALREADY_EXISTED;
+            if (usernameToPassword.get(username) != null)
+                return RegisterStatus.USERNAME_ALREADY_EXISTED;
 
             // add user to UserInfo.txt
             BufferedWriter writer = new BufferedWriter(new FileWriter("UserInfo.txt", true));
@@ -99,7 +103,6 @@ public class Authenticator extends UnicastRemoteObject implements Auth{
         }
     }
 
-    // TODO: might need to change the return type later
     private HashMap<String, String> getUsersInfoFromFile(String fileName) {
         HashMap<String, String> res = new HashMap<>();
         File file = new File(fileName);
@@ -120,7 +123,7 @@ public class Authenticator extends UnicastRemoteObject implements Auth{
                 String password_ = arr[1];
                 res.put(username_, password_);
             }
-        } catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
         }
         return res;
@@ -136,6 +139,5 @@ public class Authenticator extends UnicastRemoteObject implements Auth{
             System.err.println("Exception thrown: " + e);
         }
     }
-
 
 }
