@@ -8,11 +8,32 @@ public class DatabaseConnection {
     private static final String DB_PASS = "game24PASS";
     private static final String DB_NAME = "game24";
     private Connection conn;
-    public DatabaseConnection() throws SQLException, InstantiationException, IllegalAccessException, ClassNotFoundException {
+
+    public DatabaseConnection()
+            throws SQLException, InstantiationException, IllegalAccessException, ClassNotFoundException {
         Class.forName("com.mysql.jdbc.Driver").newInstance();
 
-        conn = DriverManager.getConnection("jdbc:mysql://"+DB_HOST+"/"+DB_NAME+"?user="+DB_USER+"&password="+DB_PASS);
+        conn = DriverManager
+                .getConnection("jdbc:mysql://" + DB_HOST + "/" + DB_NAME + "?user=" + DB_USER + "&password=" + DB_PASS);
         System.out.println("Connected to database successfully!");
+    }
+
+    public void beginTransaction() throws SQLException {
+        conn.setAutoCommit(false);
+    }
+
+    public void commit() throws SQLException {
+        conn.commit();
+        conn.setAutoCommit(true);
+    }
+
+    public void rollback() {
+        try {
+            conn.rollback();
+            conn.setAutoCommit(true);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 
     public void insertUsers(String name, String password) {
@@ -23,9 +44,10 @@ public class DatabaseConnection {
             stmt.execute();
             System.out.println(name + "inserted into users");
         } catch (SQLException | IllegalArgumentException e) {
-            System.err.println("Error inserting record: "+e);
+            System.err.println("Error inserting record: " + e);
         }
     }
+
     public void insertOnlineUsers(String name) {
         try {
             PreparedStatement stmt = conn.prepareStatement(SqlStatements.INSERT_ONLINE_USERS);
@@ -33,9 +55,10 @@ public class DatabaseConnection {
             stmt.execute();
             System.out.println(name + "inserted into online_users");
         } catch (SQLException | IllegalArgumentException e) {
-            System.err.println("Error inserting record: "+e);
+            System.err.println("Error inserting record: " + e);
         }
     }
+
     public void insertGames(String winner, int duration) {
         try {
             PreparedStatement stmt = conn.prepareStatement(SqlStatements.INSERT_GAMES);
@@ -44,9 +67,10 @@ public class DatabaseConnection {
             stmt.execute();
             System.out.println("inserted into games");
         } catch (SQLException | IllegalArgumentException e) {
-            System.err.println("Error inserting record: "+e);
+            System.err.println("Error inserting record: " + e);
         }
     }
+
     public void insertUserToGame(int userID, int gameID) {
         try {
             PreparedStatement stmt = conn.prepareStatement(SqlStatements.INSERT_USER_TO_GAME);
@@ -55,7 +79,7 @@ public class DatabaseConnection {
             stmt.execute();
             System.out.println("inserted into user_to_game");
         } catch (SQLException | IllegalArgumentException e) {
-            System.err.println("Error inserting record: "+e);
+            System.err.println("Error inserting record: " + e);
         }
     }
 
@@ -73,7 +97,7 @@ public class DatabaseConnection {
             result.put("name", rs.getString("name"));
             result.put("password", rs.getString("password"));
         } catch (SQLException | IllegalArgumentException e) {
-            System.err.println("Error reading record: "+e);
+            System.err.println("Error reading record: " + e);
         }
         return result;
     }
@@ -91,13 +115,14 @@ public class DatabaseConnection {
 
             result.put("name", rs.getString("name"));
         } catch (SQLException | IllegalArgumentException e) {
-            System.err.println("Error reading record: "+e);
+            System.err.println("Error reading record: " + e);
         }
         return result;
     }
+
     public void update(String name, String newPassword) throws SQLException {
         try {
-            conn.setAutoCommit(false);  // Start transaction
+            conn.setAutoCommit(false); // Start transaction
 
             PreparedStatement stmt1 = conn.prepareStatement("UPDATE user_info SET password = ? WHERE name = ?");
             stmt1.setString(1, newPassword);
@@ -116,14 +141,14 @@ public class DatabaseConnection {
             conn.commit();
             System.out.println("Password of " + name + " updated");
         } catch (SQLException e) {
-            conn.rollback();  // Rollback if error occurs
+            conn.rollback(); // Rollback if error occurs
             throw e;
         } finally {
-            conn.setAutoCommit(true);  // Reset to default
+            conn.setAutoCommit(true); // Reset to default
         }
     }
 
-    public void deleteOnlineUsers(String username) throws SQLException, IllegalArgumentException{
+    public void deleteOnlineUsers(String username) throws SQLException, IllegalArgumentException {
         PreparedStatement stmt = conn.prepareStatement(SqlStatements.DELETE_ONLINE_USERS);
         stmt.setString(1, username);
         int rows = stmt.executeUpdate();
@@ -140,7 +165,7 @@ public class DatabaseConnection {
             PreparedStatement stmt = conn.prepareStatement(SqlStatements.REFRESH_ONLINE_USERS);
             stmt.executeUpdate();
         } catch (SQLException e) {
-            System.err.println("Failed to refresh online_users table "+e);
+            System.err.println("Failed to refresh online_users table " + e);
         }
     }
 }
