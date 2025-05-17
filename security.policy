@@ -3,4 +3,5 @@ grant {
     permission java.io.FilePermission "${user.dir}${/}OnlineUsers.txt", "read,write";
     permission java.net.SocketPermission "localhost:1099", "connect,resolve";
     permission java.net.SocketPermission "*:1024-65535", "connect,accept,resolve";
+    permission java.util.PropertyPermission "org.jvnet.hk2.properties.debug.service.locator.lifecycle", "read";
 };

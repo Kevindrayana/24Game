@@ -249,8 +249,71 @@ public class MainUI implements MessageListener {
         return panel;
     }
 
+    private JPanel createLeaderboardPanel() {
+        JPanel mainPanel = new JPanel(new BorderLayout());
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+
+        List<LeaderboardEntry> leaderboard = userService.getLeaderboard();
+
+        String[] columnNames = { "Rank", "Username", "Wins", "Games Played", "Avg Time to Win (sec)" };
+        Object[][] data = new Object[leaderboard.size()][5];
+        for (int i = 0; i < leaderboard.size(); i++) {
+            LeaderboardEntry entry = leaderboard.get(i);
+            data[i][0] = i + 1; // Rank starts at 1
+            data[i][1] = entry.getUsername();
+            data[i][2] = entry.getWins();
+            data[i][3] = entry.getGamesPlayed();
+            data[i][4] = String.format("%.2f", entry.getAverageTimeToWin());
+        }
+
+        JTable table = new JTable(data, columnNames);
+        table.setFillsViewportHeight(true);
+        table.setFont(new Font("Arial", Font.PLAIN, 14));
+        table.getTableHeader().setFont(new Font("Arial", Font.BOLD, 14));
+        JScrollPane scrollPane = new JScrollPane(table);
+
+        panel.add(scrollPane, BorderLayout.CENTER);
+        
+
+        mainPanel.add(panel, BorderLayout.CENTER);
+        return mainPanel;
+    }
+
+    private JPanel createLeaderboardPanel() {
+        JPanel mainPanel = new JPanel(new BorderLayout());
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+
+        List<LeaderboardEntry> leaderboard = userService.getLeaderboard();
+
+        String[] columnNames = { "Rank", "Username", "Wins", "Games Played", "Avg Time to Win (sec)" };
+        Object[][] data = new Object[leaderboard.size()][5];
+        for (int i = 0; i < leaderboard.size(); i++) {
+            LeaderboardEntry entry = leaderboard.get(i);
+            data[i][0] = i + 1; // Rank starts at 1
+            data[i][1] = entry.getUsername();
+            data[i][2] = entry.getWins();
+            data[i][3] = entry.getGamesPlayed();
+            data[i][4] = String.format("%.2f", entry.getAverageTimeToWin());
+        }
+
+        JTable table = new JTable(data, columnNames);
+        table.setFillsViewportHeight(true);
+        table.setFont(new Font("Arial", Font.PLAIN, 14));
+        table.getTableHeader().setFont(new Font("Arial", Font.BOLD, 14));
+        JScrollPane scrollPane = new JScrollPane(table);
+
+        panel.add(scrollPane, BorderLayout.CENTER);
+        
+
+        mainPanel.add(panel, BorderLayout.CENTER);
+        return mainPanel;
+    }
+
     class LogoutButtonListener implements ActionListener {
         @Override
+        public void actionPerformed(ActionEvent e) {
         public void actionPerformed(ActionEvent e) {
             try {
                 if (authenticator.logout(username)) {

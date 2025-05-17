@@ -9,21 +9,9 @@ import java.util.HashMap;
 public class Authenticator extends UnicastRemoteObject implements Auth {
     private DatabaseConnection db_conn;
 
-public class Authenticator extends UnicastRemoteObject implements Auth{
-    private DatabaseConnection db_conn;
-    public Authenticator() throws RemoteException{
+    public Authenticator() throws RemoteException {
         super();
 
-        try {
-            db_conn = new DatabaseConnection();
-            db_conn.refreshOnlineUsers(); // clear online_users
-        } catch (SQLException | InstantiationException | IllegalAccessException | ClassNotFoundException e) {
-            throw new RuntimeException(e);
-        }
-
-        // TODO: Flush the online_users table
-
-        // create a DB connection
         try {
             db_conn = new DatabaseConnection();
             db_conn.refreshOnlineUsers(); // clear online_users
@@ -74,7 +62,8 @@ public class Authenticator extends UnicastRemoteObject implements Auth{
             db_conn.insertUsers(username, password);
             db_conn.commit(); // end transaction
 
-        if (login(username, password) != LoginStatus.SUCCESS) return RegisterStatus.LOGIN_FAIL;
+            if (login(username, password) != LoginStatus.SUCCESS)
+                return RegisterStatus.LOGIN_FAIL;
 
             System.out.println("register successful :)");
             return RegisterStatus.SUCCESS;

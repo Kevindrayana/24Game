@@ -37,13 +37,14 @@ public class JPoker24GameServer implements MessageListener {
     private MessageConsumer receiver;
     private MessageProducer producer;
     private UserServiceImpl userService;
+
     public JPoker24GameServer() throws NamingException, JMSException {
         try {
             // setup RMI
             Authenticator app = new Authenticator();
             userService = new UserServiceImpl();
             Registry registry = LocateRegistry.createRegistry(1099);
-            System.setSecurityManager(new SecurityManager());
+            // System.setSecurityManager(new SecurityManager());
             Naming.rebind("Authenticator", app);
             Naming.rebind("UserService", userService);
             System.out.println("Service registered!");
@@ -73,7 +74,7 @@ public class JPoker24GameServer implements MessageListener {
         try {
             JPoker24GameServer server = new JPoker24GameServer();
             System.out.println("Server running. Press Ctrl+C to stop.");
-//            Thread.currentThread().join(); // keep server alive
+            // Thread.currentThread().join(); // keep server alive
         } catch (Exception e) {
             System.err.println("Exception thrown: " + e);
         }
@@ -172,7 +173,7 @@ public class JPoker24GameServer implements MessageListener {
 
     private void endGame(String gameId, String winner, String answer) {
         Game game = activeGames.get(gameId);
-        int duration = (int) (System.currentTimeMillis() - game.getStartAt()) / 1000; //duration of game in seconds
+        int duration = (int) (System.currentTimeMillis() - game.getStartAt()) / 1000; // duration of game in seconds
         List<String> players = game.getPlayers();
 
         // insert to DB
@@ -185,7 +186,6 @@ public class JPoker24GameServer implements MessageListener {
             System.err.println("Error inserting to DB: " + ex);
         }
 
-
         // notify all subscribers that the game has ended
         try {
             TextMessage msg = session.createTextMessage();
@@ -196,7 +196,9 @@ public class JPoker24GameServer implements MessageListener {
             msg.setStringProperty("answer", answer);
             msg.setIntProperty("duration", duration);
             producer.send(msg);
-            System.out.println("Sent GAME_OVER to topic for game " + gameId + " with players: " + msg.getStringProperty("players") + " with winner: " + msg.getStringProperty("winner") + " with duration: " + msg.getIntProperty("duration"));
+            System.out.println("Sent GAME_OVER to topic for game " + gameId + " with players: "
+                    + msg.getStringProperty("players") + " with winner: " + msg.getStringProperty("winner")
+                    + " with duration: " + msg.getIntProperty("duration"));
         } catch (JMSException e) {
             System.err.println("Error sending GAME_START message: " + e);
         }
