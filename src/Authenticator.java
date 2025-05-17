@@ -30,10 +30,9 @@ public class Authenticator extends UnicastRemoteObject implements Auth {
             HashMap<String, String> userData = db_conn.readUsers(username);
             HashMap<String, String> userOnline = db_conn.readOnlineUsers(username);
 
-            // check if user exists
+            // check if user exists and correct password
             if (userData.isEmpty())
                 return LoginStatus.USER_NOT_FOUND;
-            // validate user from UserInfo.txt
             if (!password.equals(userData.get("password")))
                 return LoginStatus.INVALID_CREDENTIALS;
             // check if user have logged in already
@@ -49,14 +48,12 @@ public class Authenticator extends UnicastRemoteObject implements Auth {
             e.printStackTrace();
             return LoginStatus.FAIL;
         }
-
     }
 
     @Override
     public RegisterStatus register(String username, String password) throws RemoteException {
         try {
             db_conn.beginTransaction();
-            
             // read user from DB
             HashMap<String, String> userData = db_conn.readUsers(username);
             // check if username already registered
