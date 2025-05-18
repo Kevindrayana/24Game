@@ -130,23 +130,6 @@ public class MainUI implements MessageListener {
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
-        // refresh button at the top
-        JButton refreshButton = new JButton("Refresh");
-        refreshButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-        refreshButton.addActionListener(e -> {
-            Container parent = panel.getParent();
-            if (parent instanceof JTabbedPane) {
-                JTabbedPane tabbedPane = (JTabbedPane) parent;
-                int index = tabbedPane.indexOfComponent(panel);
-                tabbedPane.setComponentAt(index, createUserProfilePanel());
-                frame.revalidate();
-                frame.repaint();
-            }
-        });
-
-        panel.add(refreshButton);
-        panel.add(Box.createRigidArea(new Dimension(0, 20)));
-
         JLabel welcomeLabel = new JLabel("Welcome, " + username);
         welcomeLabel.setFont(new Font("Arial", Font.BOLD, 24));
         welcomeLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -199,22 +182,7 @@ public class MainUI implements MessageListener {
         JPanel mainPanel = new JPanel(new BorderLayout());
         mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
-        // refresh button at the top
-        JButton refreshButton = new JButton("Refresh");
-        mainPanel.add(refreshButton, BorderLayout.NORTH);
-
         JPanel panel = new JPanel(new BorderLayout());
-
-        refreshButton.addActionListener(e -> {
-            Container parent = mainPanel.getParent();
-            if (parent instanceof JTabbedPane) {
-                JTabbedPane tabbedPane = (JTabbedPane) parent;
-                int index = tabbedPane.indexOfComponent(mainPanel);
-                tabbedPane.setComponentAt(index, createLeaderboardPanel());
-                frame.revalidate();
-                frame.repaint();
-            }
-        });
 
         try {
             List<LeaderboardEntry> leaderboard = userService.getLeaderboard();
