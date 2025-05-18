@@ -22,7 +22,7 @@ public class Authenticator extends UnicastRemoteObject implements Auth {
     }
 
     @Override
-    public LoginStatus login(String username, String password) throws RemoteException {
+    public synchronized LoginStatus login(String username, String password) throws RemoteException {
         try {
             db_conn.beginTransaction();
 
@@ -51,7 +51,7 @@ public class Authenticator extends UnicastRemoteObject implements Auth {
     }
 
     @Override
-    public RegisterStatus register(String username, String password) throws RemoteException {
+    public synchronized RegisterStatus register(String username, String password) throws RemoteException {
         try {
             db_conn.beginTransaction();
             // read user from DB
@@ -77,7 +77,7 @@ public class Authenticator extends UnicastRemoteObject implements Auth {
     }
 
     @Override
-    public boolean logout(String username) throws RemoteException {
+    public synchronized boolean logout(String username) throws RemoteException {
         try {
             // delete user from online_users
             db_conn.deleteOnlineUsers(username);
