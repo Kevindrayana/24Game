@@ -5,7 +5,9 @@ import java.util.Map;
 
 public interface UserService extends Remote {
     Map<String, Object> getUserInfo(String username) throws RemoteException;
+
     List<LeaderboardEntry> getLeaderboard() throws RemoteException;
-    void insertGame(String gameId, String winner, int duration) throws RemoteException;
-    void insertUserToGame(String user, String gameId) throws RemoteException;
+
+    void updateLeaderboard(String gameId, String winner, int duration, List<String> players) throws RemoteException;
+
 }

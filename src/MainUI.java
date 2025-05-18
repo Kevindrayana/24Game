@@ -1,5 +1,8 @@
 import javax.naming.*;
 import javax.swing.*;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
+
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -63,24 +66,58 @@ public class MainUI implements MessageListener {
 
         JTabbedPane tabbedPane = new JTabbedPane();
 
+        // initial panels
         JPanel userProfilePanel = createUserProfilePanel();
-        tabbedPane.addTab("User Profile", userProfilePanel);
-
         gamePanel = createPlayGamePanel();
-        tabbedPane.addTab("Play Game", gamePanel);
-
         JPanel leaderboardPanel = createLeaderboardPanel();
-        tabbedPane.addTab("Leader Board", leaderboardPanel);
-
         JPanel logoutPanel = createLogoutPanel();
+
+        tabbedPane.addTab("User Profile", userProfilePanel);
+        tabbedPane.addTab("Play Game", gamePanel);
+        tabbedPane.addTab("Leader Board", leaderboardPanel);
         tabbedPane.addTab("Logout", logoutPanel);
+
+        // refresh panels on tab selection
+        tabbedPane.addChangeListener(new ChangeListener() {
+            @Override
+            public void stateChanged(ChangeEvent e) {
+                int idx = tabbedPane.getSelectedIndex();
+                String title = tabbedPane.getTitleAt(idx);
+                switch (title) {
+                    case "User Profile":
+                        tabbedPane.setComponentAt(idx, createUserProfilePanel());
+                        break;
+                    case "Leader Board":
+                        tabbedPane.setComponentAt(idx, createLeaderboardPanel());
+                        break;
+                    default:
+                        // no action for other tabs
+                }
+                frame.revalidate();
+                frame.repaint();
+            }
+        });
 
         frame.add(tabbedPane);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.addWindowListener(new java.awt.event.WindowAdapter() {
             @Override
             public void windowClosing(java.awt.event.WindowEvent e) {
+                // logout before exit
+                try {
+                    if (authenticator.logout(username)) {
+                        System.out.println("User " + username + " logged out successfully.");
+                    } else {
+                        System.err.println("Logout failed for user " + username);
+                    }
+                } catch (RemoteException ex) {
+                    System.err.println("Error during logout: " + ex);
+                }
+                // cleanup JMS resources
                 cleanup();
+                // dispose UI
+                frame.dispose();
+                System.exit(0);
             }
         });
         frame.pack();
@@ -250,6 +287,23 @@ public class MainUI implements MessageListener {
         panel.add(logoutButton);
         panel.add(Box.createVerticalGlue());
         return panel;
+    }
+
+    class LogoutButtonListener implements ActionListener {
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            try {
+                if (authenticator.logout(username)) {
+                    frame.dispose();
+                    new LoginUI().paint();
+                } else {
+                    frame.dispose();
+                    new ErrorUI("Logout failed", username).paint();
+                }
+            } catch (RemoteException ex) {
+                throw new RuntimeException(ex);
+            }
+        }
     }
 
     class PlayGameListener implements ActionListener {

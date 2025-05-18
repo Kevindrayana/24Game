@@ -177,10 +177,7 @@ public class JPoker24GameServer implements MessageListener {
 
         // update statistics
         try {
-            userService.insertGame(gameId, winner, duration);
-            for (String player : players) {
-                userService.insertUserToGame(player, gameId);
-            }
+            userService.updateLeaderboard(gameId, winner, duration, players);
         } catch (RemoteException ex) {
             System.err.println("Error inserting to DB: " + ex);
         }
