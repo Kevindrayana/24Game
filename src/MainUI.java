@@ -33,16 +33,19 @@ public class MainUI implements MessageListener {
 
     public MainUI(String username) throws NamingException, JMSException {
         try {
+            // setup RMI
             this.username = username;
             authenticator = (Auth) Naming.lookup("rmi://localhost:1099/Authenticator");
             userService = (UserService) Naming.lookup("rmi://localhost:1099/UserService");
 
+            // setup JMS
             Context ctx = new InitialContext();
             ConnectionFactory factory = (ConnectionFactory) ctx.lookup("jms/JPoker24GameConnectionFactory");
             queue = (Queue) ctx.lookup("jms/JPoker24GameQueue");
             topic = (Topic) ctx.lookup("jms/JPoker24GameTopic");
             connection = factory.createConnection();
 
+            // setup sender (queue) and consumer (topic)
             session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
             sender = session.createProducer(queue);
             consumer = session.createConsumer(topic);
@@ -249,88 +252,6 @@ public class MainUI implements MessageListener {
         return panel;
     }
 
-    private JPanel createLeaderboardPanel() {
-        JPanel mainPanel = new JPanel(new BorderLayout());
-        mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
-
-
-        List<LeaderboardEntry> leaderboard = userService.getLeaderboard();
-
-        String[] columnNames = { "Rank", "Username", "Wins", "Games Played", "Avg Time to Win (sec)" };
-        Object[][] data = new Object[leaderboard.size()][5];
-        for (int i = 0; i < leaderboard.size(); i++) {
-            LeaderboardEntry entry = leaderboard.get(i);
-            data[i][0] = i + 1; // Rank starts at 1
-            data[i][1] = entry.getUsername();
-            data[i][2] = entry.getWins();
-            data[i][3] = entry.getGamesPlayed();
-            data[i][4] = String.format("%.2f", entry.getAverageTimeToWin());
-        }
-
-        JTable table = new JTable(data, columnNames);
-        table.setFillsViewportHeight(true);
-        table.setFont(new Font("Arial", Font.PLAIN, 14));
-        table.getTableHeader().setFont(new Font("Arial", Font.BOLD, 14));
-        JScrollPane scrollPane = new JScrollPane(table);
-
-        panel.add(scrollPane, BorderLayout.CENTER);
-        
-
-        mainPanel.add(panel, BorderLayout.CENTER);
-        return mainPanel;
-    }
-
-    private JPanel createLeaderboardPanel() {
-        JPanel mainPanel = new JPanel(new BorderLayout());
-        mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
-
-
-        List<LeaderboardEntry> leaderboard = userService.getLeaderboard();
-
-        String[] columnNames = { "Rank", "Username", "Wins", "Games Played", "Avg Time to Win (sec)" };
-        Object[][] data = new Object[leaderboard.size()][5];
-        for (int i = 0; i < leaderboard.size(); i++) {
-            LeaderboardEntry entry = leaderboard.get(i);
-            data[i][0] = i + 1; // Rank starts at 1
-            data[i][1] = entry.getUsername();
-            data[i][2] = entry.getWins();
-            data[i][3] = entry.getGamesPlayed();
-            data[i][4] = String.format("%.2f", entry.getAverageTimeToWin());
-        }
-
-        JTable table = new JTable(data, columnNames);
-        table.setFillsViewportHeight(true);
-        table.setFont(new Font("Arial", Font.PLAIN, 14));
-        table.getTableHeader().setFont(new Font("Arial", Font.BOLD, 14));
-        JScrollPane scrollPane = new JScrollPane(table);
-
-        panel.add(scrollPane, BorderLayout.CENTER);
-        
-
-        mainPanel.add(panel, BorderLayout.CENTER);
-        return mainPanel;
-    }
-
-    class LogoutButtonListener implements ActionListener {
-        @Override
-        public void actionPerformed(ActionEvent e) {
-        public void actionPerformed(ActionEvent e) {
-            try {
-                if (authenticator.logout(username)) {
-                    frame.dispose();
-                    cleanup();
-                    new LoginUI().paint();
-                } else {
-                    frame.dispose();
-                    cleanup();
-                    new ErrorUI("Logout failed", username).paint();
-                }
-            } catch (RemoteException ex) {
-                throw new RuntimeException(ex);
-            }
-        }
-    }
-
     class PlayGameListener implements ActionListener {
         @Override
         public void actionPerformed(ActionEvent e) {
@@ -423,9 +344,6 @@ public class MainUI implements MessageListener {
         for (String card : cards) {
             String cardLower = card.toLowerCase();
             File imageFile = new File("images/cards/" + cardLower + ".gif");
-
-            System.out.println("Trying to load: " + imageFile.getAbsolutePath());
-            System.out.println("File exists: " + imageFile.exists());
 
             if (imageFile.exists()) {
                 ImageIcon cardIcon = new ImageIcon(imageFile.getAbsolutePath());
@@ -524,8 +442,6 @@ public class MainUI implements MessageListener {
 
         gamePanel.revalidate();
         gamePanel.repaint();
-
-
 
         JTabbedPane tabbedPane = (JTabbedPane) frame.getContentPane().getComponent(0);
         tabbedPane.setSelectedIndex(1);

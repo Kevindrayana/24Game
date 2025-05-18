@@ -36,16 +36,15 @@ public class JPoker24GameServer implements MessageListener {
     private Session session;
     private MessageConsumer receiver;
     private MessageProducer producer;
+    private Authenticator authenticator;
     private UserServiceImpl userService;
 
     public JPoker24GameServer() throws NamingException, JMSException {
         try {
             // setup RMI
-            Authenticator app = new Authenticator();
+            authenticator = new Authenticator();
             userService = new UserServiceImpl();
-            Registry registry = LocateRegistry.createRegistry(1099);
-            // System.setSecurityManager(new SecurityManager());
-            Naming.rebind("Authenticator", app);
+            Naming.rebind("Authenticator", authenticator);
             Naming.rebind("UserService", userService);
             System.out.println("Service registered!");
 
@@ -176,7 +175,7 @@ public class JPoker24GameServer implements MessageListener {
         int duration = (int) (System.currentTimeMillis() - game.getStartAt()) / 1000; // duration of game in seconds
         List<String> players = game.getPlayers();
 
-        // insert to DB
+        // update statistics
         try {
             userService.insertGame(gameId, winner, duration);
             for (String player : players) {

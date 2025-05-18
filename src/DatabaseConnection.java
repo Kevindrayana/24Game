@@ -225,7 +225,7 @@ public class DatabaseConnection {
 
     public void update(String name, String newPassword) throws SQLException {
         try {
-            conn.setAutoCommit(false); // Start transaction
+            conn.setAutoCommit(false); 
 
             PreparedStatement stmt1 = conn.prepareStatement("UPDATE user_info SET password = ? WHERE name = ?");
             stmt1.setString(1, newPassword);
@@ -247,7 +247,7 @@ public class DatabaseConnection {
             conn.rollback();
             throw e;
         } finally {
-            conn.setAutoCommit(true); // reset to default
+            conn.setAutoCommit(true); 
         }
     }
 
